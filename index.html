@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#3d8ff0">
+  <meta name="description" content="Lance ton avion en papier le plus loin possible, améliore-le et débloque des compétences !">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Aéro Papier">
+  <title>Aéro Papier</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- ===================== HUD en jeu ===================== -->
+  <div id="hud" class="hidden">
+    <button id="btn-pause" class="hud-btn" aria-label="Pause"><span class="pause-icon"></span></button>
+    <div id="hud-center">
+      <div id="hud-dist">0 m</div>
+      <div id="hud-alt">hauteur 0 m</div>
+    </div>
+    <div id="hud-right">
+      <div id="hud-record">🏆 0 m</div>
+      <div id="hud-money">💰 +0</div>
+    </div>
+    <div id="hud-skills"></div>
+    <button id="btn-boost" aria-label="Boost">
+      <svg viewBox="0 0 100 100" class="boost-ring">
+        <circle cx="50" cy="50" r="44" class="ring-bg"></circle>
+        <circle cx="50" cy="50" r="44" class="ring-fg" id="boost-ring-fg"></circle>
+      </svg>
+      <span class="boost-icon">🔥</span>
+      <span class="boost-label">BOOST</span>
+    </button>
+    <div id="hint"></div>
+  </div>
+
+  <!-- ===================== Pause ===================== -->
+  <div id="pause" class="overlay hidden">
+    <div class="panel small">
+      <h2>Pause</h2>
+      <button class="btn primary" id="btn-resume">▶ Reprendre</button>
+      <button class="btn" id="btn-restart">🔄 Relancer une partie</button>
+      <button class="btn" id="btn-quit">🏠 Quitter vers le hangar</button>
+      <p class="muted">La distance déjà parcourue est quand même récompensée.</p>
+    </div>
+  </div>
+
+  <!-- ===================== Résultats ===================== -->
+  <div id="results" class="overlay hidden">
+    <div class="panel">
+      <h2 id="res-title">Atterrissage !</h2>
+      <div id="res-dist" class="big-num">0 m</div>
+      <div id="res-record" class="badge hidden">🏆 Nouveau record !</div>
+      <div class="res-grid">
+        <div><span>💰 Argent</span><b id="res-money">+0</b></div>
+        <div><span>⭐ XP</span><b id="res-xp">+0</b></div>
+        <div><span>🎁 Bonus</span><b id="res-pickups">0</b></div>
+      </div>
+      <div id="res-level"></div>
+      <div class="row">
+        <button class="btn" id="btn-res-hangar">🏠 Hangar</button>
+        <button class="btn primary" id="btn-res-again">🔄 Relancer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== Hangar (menu principal) ===================== -->
+  <div id="menu" class="screen">
+    <div class="menu-side">
+      <div class="logo">
+        <svg viewBox="0 0 64 40" class="logo-plane"><path d="M62 18 L2 2 L14 20 Z" fill="#fff"/><path d="M62 18 L14 20 L8 34 Z" fill="#cfe0f5"/><path d="M62 18 L10 9" stroke="#8ea3bd" stroke-width="1.5"/></svg>
+        <h1>Aéro<br>Papier</h1>
+      </div>
+      <div class="profile">
+        <div class="lvl-row"><span class="lvl-badge" id="m-level">Niv. 1</span><span class="muted small" id="m-xp-text">0 / 80 XP</span></div>
+        <div class="xp-bar"><div id="m-xp-bar"></div></div>
+        <div class="stat-row"><span>💰 Argent</span><b id="m-money">0</b></div>
+        <div class="stat-row"><span>✨ Points</span><b id="m-points">0</b></div>
+        <div class="stat-row"><span>🏆 Record</span><b id="m-record">0 m</b></div>
+      </div>
+      <button class="btn primary launch" id="btn-play">✈ LANCER</button>
+    </div>
+    <div class="menu-main">
+      <div class="tabs">
+        <button class="tab active" data-tab="upgrades">Améliorations</button>
+        <button class="tab" data-tab="skills">Compétences<span class="dot hidden" id="skills-dot"></span></button>
+        <button class="tab" data-tab="options">Options</button>
+      </div>
+      <div class="tab-content" id="tab-upgrades"></div>
+      <div class="tab-content hidden" id="tab-skills"></div>
+      <div class="tab-content hidden" id="tab-options"></div>
+    </div>
+  </div>
+
+  <!-- ===================== Orientation ===================== -->
+  <div id="rotate">
+    <div class="rotate-phone">📱</div>
+    <p>Tourne ton téléphone<br>en mode paysage</p>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/physics.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
