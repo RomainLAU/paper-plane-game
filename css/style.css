@@ -240,6 +240,20 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .opt-note.ok { background: #e6f8ec; }
 textarea.code { width: 100%; height: 80px; font-family: monospace; font-size: 11px; border-radius: 10px; border: 2px solid #d5dce7; padding: 8px; resize: none; user-select: text; -webkit-user-select: text; touch-action: auto; }
 
+/* ============================ Rappels de touches (ordinateur uniquement) ============================ */
+.kbd { display: none; font-size: 10px; font-weight: 800; line-height: 1; padding: 3px 5px; border-radius: 5px;
+  background: rgba(255,255,255,0.9); color: var(--ink); box-shadow: 0 2px 0 rgba(0,0,0,0.25); font-family: system-ui, sans-serif; }
+body.desktop .kbd { display: inline-block; }
+.kbd-boost { position: absolute; top: -6px; left: -6px; }
+.kbd-pause { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); font-size: 9px; }
+.kbd-inline { margin-left: 6px; vertical-align: middle; background: rgba(0,0,0,0.12); color: inherit; box-shadow: none; }
+.btn.primary .kbd-inline { background: rgba(255,255,255,0.25); }
+.small-kbd { font-size: 9px; padding: 2px 4px; margin-left: 3px; }
+body.desktop .skill-btn .key { bottom: -4px; background: rgba(255,255,255,0.9); color: var(--blue-d); border-radius: 5px; padding: 2px 5px; opacity: 1; }
+body.desktop canvas#game { cursor: crosshair; }
+#hint small { font-weight: 600; opacity: 0.85; }
+body.desktop #hint { max-width: 70vw; }
+
 /* ============================ Cartes ============================ */
 .map-btn { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 10px; background: #fff; }
 .map-btn span { font-weight: 800; font-size: 16px; }

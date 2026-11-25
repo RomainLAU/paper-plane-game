@@ -7,6 +7,8 @@
   const MONEY_PER_M = 0.25; // $ par mètre
 
   const canvas = document.getElementById('game');
+  const DESKTOP = !!(G.matchMedia && G.matchMedia('(hover: hover) and (pointer: fine)').matches);
+  if (DESKTOP) document.body.classList.add('desktop');
 
   const S = {
     mode: 'menu',     // menu | play | results
@@ -56,7 +58,9 @@
     S.paused = false;
     UI.hideMenu(); UI.hideResults(); UI.hidePause();
     UI.buildHudSkills(S.stats);
-    UI.hint("Glisse vers l'arrière puis relâche pour lancer ✈");
+    UI.hint(DESKTOP
+      ? '⬆️⬇️ pour viser · maintiens <b>Espace</b> pour doser la puissance, relâche pour lancer<br><small>ou glisse vers l\'arrière avec la souris</small>'
+      : "Glisse vers l'arrière puis relâche pour lancer ✈");
   }
 
   function toHangar() {
@@ -127,7 +131,7 @@
   function pause() {
     if (S.mode !== 'play' || S.paused) return;
     S.paused = true;
-    S.glidePointers.clear(); S.keys.glide = false; S.keys.boost = false; S.boostHeld = false;
+    S.glidePointers.clear(); glideKeys.clear(); S.keys.boost = false; S.keys.mouseBoost = false; S.boostHeld = false;
     UI.showPause();
     Sfx.silence();
   }
@@ -165,17 +169,26 @@
   }
 
   // ---------------------------------------------------------------- Visée
+  const AIM_MIN = -0.35, AIM_MAX = Math.PI / 4; // 45° max
+
+  // Visée à la souris / au doigt (fronde)
   function updateAim(cx, cy) {
     const a = S.aim;
     const pullX = a.sx - cx, pullY = cy - a.sy;
     const len = Math.hypot(pullX, pullY);
     const { W, H } = Renderer.size();
-    a.power = Math.min(1, len / (Math.min(W, H) * 0.4));
-    let ang = Math.atan2(pullY, pullX);
-    a.angle = Math.max(-0.35, Math.min(Math.PI / 4, ang)); // 45° max
+    a.kb = false;
+    setAim(Math.atan2(pullY, pullX), Math.min(1, len / (Math.min(W, H) * 0.4)));
+  }
+
+  function setAim(angle, power) {
+    const a = S.aim;
+    a.active = true;
+    a.angle = Math.max(AIM_MIN, Math.min(AIM_MAX, angle));
+    a.power = power;
     // Trajectoire prévue
     const ghost = Object.assign({}, S.plane, { uses: {} });
-    Physics.launch(ghost, S.stats, a.angle, a.power);
+    Physics.launch(ghost, S.stats, a.angle, Math.max(0.35, power));
     a.preview = [];
     const ev = [];
     for (let i = 0; i < 60 && ghost.state === 'flying'; i++) {
@@ -187,11 +200,15 @@
   function doLaunch() {
     const a = S.aim;
     a.active = false;
+    a.charging = false;
     if (a.power < 0.08) return;
     Physics.launch(S.plane, S.stats, a.angle, a.power);
+    glideKeys.clear(); // la touche de lancer encore enfoncée ne doit pas faire planer
     Sfx.launch();
     UI.vibrate(20);
-    if (Save.data.runs < 3) UI.hint('Maintiens l\'écran pour planer · 🔥 pour booster', 3500);
+    if (Save.data.runs < 3) UI.hint(DESKTOP
+      ? '<b>Espace</b> ou ⬆️ : planer · <b>B</b>, <b>Maj</b> ou ➡️ : boost · <b>1 2 3</b> : compétences'
+      : 'Maintiens l\'écran pour planer · 🔥 pour booster', 3500);
     else UI.hint(null);
   }
 
@@ -227,25 +244,154 @@
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   document.addEventListener('contextmenu', e => e.preventDefault());
 
+  // ---------------------------------------------------------------- Clavier
+  // On utilise la position physique des touches (e.code) : ZQSD en AZERTY = WASD en QWERTY.
+  const K = {
+    up: c => c === 'ArrowUp' || c === 'KeyW',
+    down: c => c === 'ArrowDown' || c === 'KeyS',
+    act: c => c === 'Space' || c === 'Enter' || c === 'NumpadEnter',
+    boost: c => c === 'KeyB' || c === 'ShiftLeft' || c === 'ShiftRight' || c === 'ArrowRight' || c === 'KeyD',
+    skill: c => { const m = /^(?:Digit|Numpad)([1-3])$/.exec(c); return m ? +m[1] : 0; },
+  };
+  const kbAim = { up: false, down: false };
+  const glideKeys = new Set(); // touches « planer » enfoncées
+
+  function startCharge() {
+    const a = S.aim;
+    if (S.plane.state !== 'aim' || a.charging) return;
+    a.charging = true; a.chargeT = 0; a.kb = true;
+    if (a.kbAngle == null) a.kbAngle = 0.35;
+  }
+
   G.addEventListener('keydown', e => {
-    if (e.target && e.target.tagName === 'TEXTAREA') return;
-    const k = e.key;
-    if (k === ' ') { S.keys.glide = true; e.preventDefault(); }
-    else if (k === 'b' || k === 'B' || k === 'Shift') S.keys.boost = true;
-    else if (k === '1' || k === '2' || k === '3') {
-      const a = S.stats && S.stats.actives[+k - 1];
-      if (a) useSkill(a.id);
-    } else if (k === 'Escape' || k === 'p' || k === 'P') {
-      if (S.mode === 'play') { if (S.paused) resume(); else pause(); }
-    } else if (k === 'Enter' && S.mode === 'results') play();
+    if (e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) return;
+    const c = e.code;
+    Sfx.unlock();
+    let used = true;
+    if (c === 'KeyM') { Save.data.settings.sound = !Save.data.settings.sound; Save.write(); if (!Save.data.settings.sound) Sfx.silence(); UI.toast(Save.data.settings.sound ? '🔊 Son activé' : '🔇 Son coupé', 1200); }
+    else if (c === 'KeyF') toggleFullscreen();
+    else if (S.mode === 'menu') {
+      if (UI.mapsOpen()) { if (c === 'Escape' || K.act(c)) UI.closeMaps(); else used = false; }
+      else if (K.act(c)) play();
+      else if (c === 'KeyC') UI.openMaps();
+      else if (c === 'ArrowLeft' || c === 'ArrowRight') UI.cycleTab(c === 'ArrowLeft' ? -1 : 1);
+      else used = false;
+    } else if (S.mode === 'results') {
+      if (e.repeat) return;
+      if (K.act(c)) play();
+      else if (c === 'Escape' || c === 'KeyH') toHangar();
+      else used = false;
+    } else if (S.mode === 'play') {
+      if (S.paused) {
+        if (c === 'Escape' || c === 'KeyP' || K.act(c)) resume();
+        else if (c === 'KeyR') restart();
+        else if (c === 'KeyH' || c === 'KeyQ') quit();
+        else used = false;
+      } else if (c === 'Escape' || c === 'KeyP') pause();
+      else if (S.plane.state === 'aim') {
+        if (K.up(c)) kbAim.up = true;
+        else if (K.down(c)) kbAim.down = true;
+        else if (K.act(c)) { if (!e.repeat) startCharge(); }
+        else used = false;
+      } else {
+        if ((c === 'Space' || K.up(c)) && !e.repeat) glideKeys.add(c);
+        else if (K.boost(c)) S.keys.boost = true;
+        else if (K.skill(c)) { if (!e.repeat) { const a = S.stats.actives[K.skill(c) - 1]; if (a) useSkill(a.id); } }
+        else if (c === 'KeyR' && !e.repeat && S.stats.actives.some(x => x.id === 'relaunch')) useSkill('relaunch');
+        else used = false;
+      }
+    } else used = false;
+    if (used) e.preventDefault();
   });
   G.addEventListener('keyup', e => {
-    const k = e.key;
-    if (k === ' ') S.keys.glide = false;
-    else if (k === 'b' || k === 'B' || k === 'Shift') S.keys.boost = false;
+    const c = e.code;
+    if (K.up(c)) kbAim.up = false;
+    if (K.down(c)) kbAim.down = false;
+    glideKeys.delete(c);
+    if (K.boost(c)) S.keys.boost = false;
+    if (K.act(c) && S.aim.charging) {
+      S.aim.charging = false;
+      if (S.mode === 'play' && !S.paused && S.plane.state === 'aim') doLaunch();
+    }
   });
+
+  // Visée au clavier / à la manette (appelé à chaque image pendant la visée)
+  function updateKeyboardAim(dt, stickY) {
+    const a = S.aim;
+    const dir = (kbAim.up ? 1 : 0) - (kbAim.down ? 1 : 0) + (stickY || 0);
+    if (dir === 0 && !a.charging && !a.kb) return;
+    if (a.pid !== null && !a.kb) return; // visée souris en cours
+    if (a.kbAngle == null) a.kbAngle = a.active ? a.angle : 0.35;
+    a.kb = true;
+    a.kbAngle = Math.max(AIM_MIN, Math.min(AIM_MAX, a.kbAngle + dir * 0.9 * dt));
+    let power = a.kbPower != null ? a.kbPower : 0.75;
+    if (a.charging) {
+      // la jauge monte puis redescend : il faut relâcher au bon moment
+      a.chargeT += dt;
+      const t = (a.chargeT / 1.1) % 2;
+      power = Math.max(0.1, t < 1 ? t : 2 - t);
+      a.kbPower = power;
+    }
+    setAim(a.kbAngle, power);
+  }
+
+  // Après un clic, on retire le focus du bouton : sinon Espace / Entrée le « recliqueraient »
+  document.addEventListener('pointerup', () => {
+    const el = document.activeElement;
+    if (el && el.tagName === 'BUTTON') el.blur();
+  });
+
+  // ---------------------------------------------------------------- Souris
+  // Clic gauche maintenu = planer (déjà géré), clic droit maintenu = boost, molette = viser
+  canvas.addEventListener('mousedown', e => { if (e.button === 2 && S.mode === 'play' && S.plane.state !== 'aim') S.keys.mouseBoost = true; });
+  G.addEventListener('mouseup', e => { if (e.button === 2) S.keys.mouseBoost = false; });
+  canvas.addEventListener('wheel', e => {
+    if (S.mode !== 'play' || S.paused || S.plane.state !== 'aim') return;
+    e.preventDefault();
+    const a = S.aim;
+    if (a.kbAngle == null) a.kbAngle = a.active ? a.angle : 0.35;
+    a.kb = true;
+    a.kbAngle = Math.max(AIM_MIN, Math.min(AIM_MAX, a.kbAngle - Math.sign(e.deltaY) * 0.05));
+    setAim(a.kbAngle, a.kbPower != null ? a.kbPower : 0.75);
+  }, { passive: false });
+
+  // ---------------------------------------------------------------- Manette
+  // A : planer / doser la puissance · RT ou B : boost · X Y LB : compétences · Start : pause · stick : viser
+  const padPrev = {};
+  function pollGamepad(dt) {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = pads && Array.from(pads).find(x => x && x.connected);
+    S.pad = { glide: false, boost: false };
+    if (!gp) return 0;
+    const b = i => !!(gp.buttons[i] && (gp.buttons[i].pressed || gp.buttons[i].value > 0.4));
+    const pressed = i => b(i) && !padPrev[i];
+    const released = i => !b(i) && padPrev[i];
+    let stickY = 0;
+    const ay = gp.axes[1] || 0;
+    if (Math.abs(ay) > 0.25) stickY = -ay;
+    if (b(12)) stickY = 1; if (b(13)) stickY = -1; // croix directionnelle
+    if (S.mode === 'menu') { if (pressed(0) || pressed(9)) play(); }
+    else if (S.mode === 'results') { if (pressed(0)) play(); else if (pressed(1)) toHangar(); }
+    else if (S.mode === 'play') {
+      if (S.paused) { if (pressed(9) || pressed(0)) resume(); else if (pressed(1)) quit(); }
+      else if (pressed(9)) pause();
+      else if (S.plane.state === 'aim') {
+        if (pressed(0)) startCharge();
+        if (released(0) && S.aim.charging) { S.aim.charging = false; doLaunch(); padPrev[0] = false; }
+      } else {
+        S.pad.glide = b(0);
+        S.pad.boost = b(7) || b(1) || b(5);
+        [2, 3, 4].forEach((bi, k) => { if (pressed(bi)) { const a = S.stats.actives[k]; if (a) useSkill(a.id); } });
+      }
+    }
+    for (let i = 0; i < gp.buttons.length; i++) padPrev[i] = b(i);
+    return stickY;
+  }
+
   G.addEventListener('blur', () => {
-    S.keys.glide = false; S.keys.boost = false; S.glidePointers.clear();
+    glideKeys.clear(); S.keys.boost = false; S.keys.mouseBoost = false; S.glidePointers.clear();
+    kbAim.up = kbAim.down = false;
+    if (S.aim.charging) { S.aim.charging = false; S.aim.active = false; }
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && S.mode === 'play' && S.plane && S.plane.state !== 'aim') pause();
@@ -291,11 +437,17 @@
     last = now;
     const p = S.plane;
 
+    const stickY = pollGamepad(dt);
+    if (S.mode === 'play' && !S.paused && p.state === 'aim') updateKeyboardAim(dt, stickY);
     if (S.mode === 'play' && !S.paused) {
       S.time += dt;
       if (p.state === 'flying' || p.state === 'sliding') {
         S.acc += dt;
-        const input = { glide: S.glidePointers.size > 0 || S.keys.glide, boost: S.boostHeld || S.keys.boost };
+        const pad = S.pad || {};
+        const input = {
+          glide: S.glidePointers.size > 0 || glideKeys.size > 0 || pad.glide,
+          boost: S.boostHeld || S.keys.boost || S.keys.mouseBoost || pad.boost,
+        };
         const ev = [];
         while (S.acc >= STEP) {
           S.acc -= STEP;

@@ -8,13 +8,16 @@ Aucune dépendance, aucune étape de build : HTML + CSS + JavaScript.
 
 ## Comment jouer
 
-| Action | Mobile | Ordinateur |
-|---|---|---|
-| Viser et lancer | Glisser vers l'arrière puis relâcher | Clic-glisser vers l'arrière puis relâcher |
-| Ralentir / planer | Maintenir le doigt sur l'écran | Maintenir le clic ou **Espace** |
-| Boost | Bouton 🔥 en bas à droite | **B** ou **Maj** |
-| Compétences actives | Boutons en bas à gauche | **1**, **2**, **3** |
-| Pause | Bouton en haut à gauche | **Échap** |
+| Action | Mobile | Clavier | Souris | Manette |
+|---|---|---|---|---|
+| Viser | glisser vers l'arrière | ⬆️ ⬇️ (ou Z/S, W/S) | glisser vers l'arrière, molette | stick gauche / croix |
+| Lancer | relâcher | maintenir **Espace** (la jauge monte puis redescend), relâcher | relâcher | maintenir puis relâcher **A** |
+| Planer | maintenir le doigt | maintenir **Espace** ou ⬆️ | maintenir clic gauche | maintenir **A** |
+| Boost | bouton 🔥 | **B**, **Maj**, ➡️ ou **D** | maintenir clic droit | **RT**, **RB** ou **B** |
+| Compétences actives | boutons en bas à gauche | **1**, **2**, **3** (second lancer : **R**) | clic | **X**, **Y**, **LB** |
+| Pause | bouton en haut à gauche | **Échap** ou **P** (puis **R** relancer, **H** hangar) | clic | **Start** |
+| Menus | — | **Entrée** lancer/relancer · **Échap** hangar · ⬅️➡️ onglets · **C** cartes | — | **A** lancer · **B** hangar |
+| Son / plein écran | Options | **M** / **F** | — | — |
 
 Planer fait monter le nez de l'avion : il ralentit et descend moins vite… mais s'il va trop lentement, il décroche !
 

@@ -1576,7 +1576,18 @@
     ctx.fillStyle = '#fff';
     ctx.strokeStyle = 'rgba(0,0,0,0.4)';
     ctx.lineWidth = 3;
-    const label = `${Math.round(aim.power * 100)}%  ${Math.round(aim.angle * 180 / Math.PI)}°`;
+    // Jauge de puissance (visée au clavier / à la manette)
+    if (aim.kb && aim.charging) {
+      const gx = x - 46, gy = y - 45, gh = 90, gw = 12;
+      ctx.fillStyle = 'rgba(20,40,80,0.55)';
+      roundRect(gx - 3, gy - 3, gw + 6, gh + 6, 6); ctx.fill();
+      const g = ctx.createLinearGradient(0, gy + gh, 0, gy);
+      g.addColorStop(0, '#5be36b'); g.addColorStop(0.5, '#ffd23f'); g.addColorStop(1, '#ff4b3a');
+      ctx.fillStyle = g;
+      roundRect(gx, gy + gh * (1 - aim.power), gw, gh * aim.power, 4); ctx.fill();
+    }
+    const deg = Math.round(aim.angle * 180 / Math.PI);
+    const label = aim.kb && !aim.charging ? `${deg}° · maintiens Espace` : `${Math.round(aim.power * 100)}%  ${deg}°`;
     ctx.strokeText(label, x, y + 34);
     ctx.fillText(label, x, y + 34);
   }

@@ -1,6 +1,6 @@
 /* Service worker : le jeu fonctionne hors-ligne une fois chargé.
    Stratégie "réseau d'abord" : toujours la dernière version en ligne, le cache sert seulement hors-ligne. */
-const CACHE = 'aeropapier-v6';
+const CACHE = 'aeropapier-v7';
 const ASSETS = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
   'js/data.js', 'js/physics.js', 'js/maps.js', 'js/planes.js', 'js/save.js', 'js/audio.js', 'js/render.js', 'js/ui.js', 'js/main.js',

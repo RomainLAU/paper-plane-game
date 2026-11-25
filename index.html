@@ -20,7 +20,7 @@
 
   <!-- ===================== HUD en jeu ===================== -->
   <div id="hud" class="hidden">
-    <button id="btn-pause" class="hud-btn" aria-label="Pause"><span class="pause-icon"></span></button>
+    <button id="btn-pause" class="hud-btn" aria-label="Pause" title="Pause (Échap)"><span class="pause-icon"></span><span class="kbd kbd-pause">Échap</span></button>
     <div id="hud-center">
       <div id="hud-dist">0 m</div>
       <div id="hud-alt">hauteur 0 m</div>
@@ -37,6 +37,7 @@
       </svg>
       <span class="boost-icon">🔥</span>
       <span class="boost-label">BOOST</span>
+      <span class="kbd kbd-boost">B</span>
     </button>
     <div id="hint"></div>
   </div>
@@ -45,9 +46,9 @@
   <div id="pause" class="overlay hidden">
     <div class="panel small">
       <h2>Pause</h2>
-      <button class="btn primary" id="btn-resume">▶ Reprendre</button>
-      <button class="btn" id="btn-restart">🔄 Relancer une partie</button>
-      <button class="btn" id="btn-quit">🏠 Quitter vers le hangar</button>
+      <button class="btn primary" id="btn-resume">▶ Reprendre <span class="kbd kbd-inline">Échap</span></button>
+      <button class="btn" id="btn-restart">🔄 Relancer une partie <span class="kbd kbd-inline">R</span></button>
+      <button class="btn" id="btn-quit">🏠 Quitter vers le hangar <span class="kbd kbd-inline">H</span></button>
       <p class="muted">La distance déjà parcourue est quand même récompensée.</p>
     </div>
   </div>
@@ -65,8 +66,8 @@
       </div>
       <div id="res-level"></div>
       <div class="row">
-        <button class="btn" id="btn-res-hangar">🏠 Hangar</button>
-        <button class="btn primary" id="btn-res-again">🔄 Relancer</button>
+        <button class="btn" id="btn-res-hangar">🏠 Hangar <span class="kbd kbd-inline">Échap</span></button>
+        <button class="btn primary" id="btn-res-again">🔄 Relancer <span class="kbd kbd-inline">Entrée</span></button>
       </div>
     </div>
   </div>
@@ -85,8 +86,8 @@
         <div class="stat-row"><span>✨ Points</span><b id="m-points">0</b></div>
         <div class="stat-row"><span>🏆 Record (carte)</span><b id="m-record">0 m</b></div>
       </div>
-      <button class="btn map-btn" id="btn-map"><span id="m-map">🌾 Prairie</span><small>Changer de carte ▸</small></button>
-      <button class="btn primary launch" id="btn-play">✈ LANCER</button>
+      <button class="btn map-btn" id="btn-map"><span id="m-map">🌾 Prairie</span><small>Changer de carte ▸ <span class="kbd kbd-inline small-kbd">C</span></small></button>
+      <button class="btn primary launch" id="btn-play">✈ LANCER <span class="kbd kbd-inline">Entrée</span></button>
     </div>
     <div class="menu-main">
       <div class="tabs">

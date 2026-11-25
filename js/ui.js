@@ -138,7 +138,14 @@
       <div id="export-box" class="hidden"><textarea class="code" id="export-code" readonly></textarea><button class="btn" data-opt="copy" style="margin-top:6px;width:100%">📋 Copier</button></div>
       <div class="opt-row"><span>📥 Restaurer une sauvegarde</span><button class="btn" data-opt="import">Importer</button></div>
       <div id="import-box" class="hidden"><textarea class="code" id="import-code" placeholder="Colle ton code ici (AP1-...)"></textarea><button class="btn primary" data-opt="do-import" style="margin-top:6px;width:100%">Restaurer</button></div>
-      <div class="opt-note">🎮 <b>Commandes</b> — Glisse vers l'arrière puis relâche pour lancer. Maintiens l'écran (ou <b>Espace</b>) pour ralentir et planer. Bouton 🔥 (ou <b>B</b> / <b>Maj</b>) pour booster. Compétences actives : bouton en bas à gauche (ou <b>1</b>, <b>2</b>, <b>3</b>). Pause : <b>Échap</b>.</div>
+      <div class="opt-note">🎮 <b>Commandes</b><br>
+        <b>Mobile</b> — glisse vers l'arrière puis relâche pour lancer · maintiens l'écran pour planer · 🔥 pour booster · compétences en bas à gauche.<br>
+        <b>Clavier</b> — visée : ⬆️⬇️ (ou Z/S, W/S) · maintiens <b>Espace</b> pour doser la puissance et relâche pour lancer ·
+        planer : <b>Espace</b> ou ⬆️ · boost : <b>B</b>, <b>Maj</b>, ➡️ ou <b>D</b> · compétences : <b>1 2 3</b> (second lancer : <b>R</b>) ·
+        pause : <b>Échap</b> ou <b>P</b> · son : <b>M</b> · plein écran : <b>F</b>.<br>
+        Dans les menus : <b>Entrée</b> = lancer / relancer · <b>Échap</b> ou <b>H</b> = hangar · ⬅️➡️ = onglets · <b>C</b> = cartes.<br>
+        <b>Souris</b> — glisser pour viser · molette = angle · clic gauche maintenu = planer · clic droit maintenu = boost.<br>
+        <b>Manette</b> — stick : viser · <b>A</b> : doser la puissance puis planer · <b>RT</b>/<b>B</b> : boost · <b>X Y LB</b> : compétences · <b>Start</b> : pause.</div>
       <div class="opt-note">🎁 <b>Bonus</b> — Partout : 🔥 recharge le boost · ⚡ vitesse · ⏫ courant ascendant · 💲 pièces.<br>
         Plus de 35 m : 🐦 oiseaux (chacun fait remonter un peu) · plus de 50 m : 🎈 montgolfière (gros rebond vers le haut) ·
         plus de 90 m : ⭐ étoile (garde ton altitude et accélère) et 💎 diamants · plus de 130 m : 🌬️ courant-jet (reste dedans pour accélérer).</div>
@@ -539,5 +546,11 @@
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) boost.addEventListener(ev, () => press(false));
   }
 
-  G.UI = { init, fmt, toast, vibrate, renderMenu, showMenu, hideMenu, showPause, hidePause, showResults, hideResults, buildHudSkills, updateHud, hint };
+  const TABS = ['upgrades', 'skills', 'plane', 'options'];
+  function cycleTab(d) { setTab(TABS[(TABS.indexOf(currentTab) + d + TABS.length) % TABS.length]); Sfx.click(); }
+  function openMaps() { renderMaps(); $('maps').classList.remove('hidden'); }
+  function closeMaps() { $('maps').classList.add('hidden'); }
+  function mapsOpen() { return !$('maps').classList.contains('hidden'); }
+
+  G.UI = { init, cycleTab, openMaps, closeMaps, mapsOpen, fmt, toast, vibrate, renderMenu, showMenu, hideMenu, showPause, hidePause, showResults, hideResults, buildHudSkills, updateHud, hint };
 })(window);
