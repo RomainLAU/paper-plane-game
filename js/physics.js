@@ -2,10 +2,13 @@
 (function (G) {
   'use strict';
   const GRAV = 9.81;
-  const MAX_CLIMB = 1.25;   // angle max de montée (rad)
-  const MAX_DIVE = -1.45;   // angle max de piqué (rad)
+  const MAX_CLIMB = Math.PI / 4; // angle max de montée : 45°
+  const MAX_DIVE = -1.2;         // angle max de piqué (rad)
   const MAX_SPEED = 120;
-  const PITCH_DAMP = 10;    // amortissement de l'oscillation montée/piqué
+  const CLIMB_GAIN = 0.9;   // pente de montée par unité de vitesse en trop (rapport à la croisière)
+  const DIVE_GAIN = 0.8;    // pente de piqué quand l'avion est trop lent
+  const TRACK_GAIN = 2.5;   // vitesse à laquelle l'avion rejoint la pente visée (1/s)
+  const TURN_RATE = 1.2;    // rotation max (rad/s)
 
   // ---------------------------------------------------------------- Terrain
   function ground(x) {
@@ -23,7 +26,7 @@
       x: 0, y: stats.launchHeight + 0.6, vx: 0, vy: 0,
       fuel: stats.tank,
       boosting: false, gliding: false,
-      liftT: 0, liftDur: 1, liftRate0: 0, liftRate: 0, nitroT: 0, glideT: 0,
+      liftT: 0, liftDur: 1, liftRate0: 0, liftRate: 0, nitroT: 0, glideT: 0, starT: 0, inJet: false,
       bouncesLeft: stats.bounces,
       maxX: 0, time: 0,
       coins: 0, pickups: 0,
@@ -83,34 +86,42 @@
     p.time += dt;
     if (p.state === 'flying') {
       const speed = Math.hypot(p.vx, p.vy) || 0.001;
-      const dx = p.vx / speed, dy = p.vy / speed;
-      const nx = -dy, ny = dx; // normale "vers le haut" de la trajectoire
 
       let cl = s.cl, cd = s.cd;
       p.gliding = !!input.glide;
       if (p.gliding) { cl *= 1.45; cd *= 1.22; }
 
-      let L = cl * speed * speed;
-      if (speed < s.vStall) L *= (speed / s.vStall) * (speed / s.vStall); // décrochage
-      // Amortissement : l'excès de portance (trop de vitesse) fait monter en pente douce
-      // au lieu de cabrer brutalement puis piquer. Au-delà de ~35° de montée, il ramène le nez.
+      const holdAlt = p.glideT > 0 || p.starT > 0;  // Vol plané / Étoile : pas de perte d'altitude
+      const g = holdAlt ? 0 : GRAV * s.gravity;
       const gamma = Math.atan2(p.vy, p.vx);
-      const trim = GRAV * s.gravity * Math.cos(gamma);
-      let excess = L - trim;
-      if (excess > 0) excess = Math.min(excess, 0.5 * GRAV) * Math.max(-1, Math.min(1, 1 - gamma / 0.6));
-      else excess = Math.max(excess, -0.35 * GRAV); // nez qui redescend progressivement quand l'avion est lent
-      // Stabilité : ramène doucement l'avion vers sa pente de plané (évite les montagnes russes)
-      excess -= PITCH_DAMP * (gamma + Math.atan(cd / cl)); // cl/cd courants : planer aplatit la pente visée
-      L = Math.min(trim + excess, s.liftMax);
+
+      // --- Pente visée selon la vitesse (pilote "doux") ---
+      // Vitesse de croisière : l'avion plane à sa pente naturelle. Plus il va vite, plus il monte
+      // (jusqu'à 45° max). Plus il est lent, plus il pique (doucement) pour reprendre de la vitesse.
+      const vc = Math.sqrt((GRAV * s.gravity) / cl);
+      const glideAng = -Math.atan(cd / cl);
+      let target;
+      if (speed >= vc) target = glideAng + CLIMB_GAIN * (speed / vc - 1);
+      else target = glideAng - DIVE_GAIN * (1 - speed / vc);
+      if (speed < s.vStall) target -= 0.6 * (1 - speed / s.vStall); // décrochage
+      if (holdAlt) target = Math.max(target, 0.05);
+      if (p.inJet) target = Math.max(-0.03, Math.min(0.03, target)); // on "surfe" le courant-jet
+      target = Math.max(MAX_DIVE, Math.min(MAX_CLIMB, target));
+
+      // Vitesse de rotation limitée par la portance disponible (on ne cabre pas sans vitesse)
+      let Lavail = cl * speed * speed;
+      if (speed < s.vStall) Lavail *= (speed / s.vStall) * (speed / s.vStall);
+      Lavail = Math.min(Lavail, s.liftMax) + (holdAlt ? GRAV : 0);
+      const cosg = Math.cos(gamma);
+      const maxUp = Math.min(TURN_RATE, (Lavail - g * cosg) / speed);
+      const maxDown = -Math.min(TURN_RATE, (g * cosg) / speed + 0.25);
+      let rate = (target - gamma) * TRACK_GAIN;
+      rate = Math.max(maxDown, Math.min(maxUp, rate));
+      const newGamma = gamma + rate * dt;
+
+      // --- Vitesse le long de la trajectoire : gravité, traînée, poussée ---
       let D = cd * speed * speed + 0.25;
-      let grav = GRAV * s.gravity;
-
-      if (p.glideT > 0) { p.glideT -= dt; grav = 0; D *= 0.5; }
-
-      let ax = nx * L - dx * D;
-      let ay = ny * L - dy * D - grav;
-
-      // Poussée : boost + nitro
+      if (p.glideT > 0) { p.glideT -= dt; D *= 0.5; }
       let thrust = 0;
       p.boosting = false;
       if (p.nitroT > 0) { p.nitroT -= dt; thrust += s.thrust * 1.8 + 10; p.boosting = true; }
@@ -123,12 +134,12 @@
       }
       // Puissance limitée : le boost pousse moins fort quand l'avion va déjà très vite
       thrust *= Math.min(1, 16 / speed);
-      ax += dx * thrust; ay += dy * thrust;
+      if (p.starT > 0) { p.starT -= dt; thrust += 7 * Math.min(1, 30 / speed); }
+      if (p.inJet) thrust += 9 * s.bonus * Math.min(1, 35 / speed);
 
-
-      p.vx += ax * dt;
-      p.vy += ay * dt;
-      if (p.glideT > 0 && p.vy < 0) p.vy = 0;
+      const newSpeed = Math.max(0.5, speed + (thrust - D - g * Math.sin(gamma)) * dt);
+      setVelocity(p, newSpeed, newGamma);
+      if (holdAlt && p.vy < 0) p.vy = 0;
 
       // Limites d'angle et de vitesse
       let sp = Math.hypot(p.vx, p.vy);
@@ -180,7 +191,7 @@
   }
 
   // ---------------------------------------------------------------- Bonus sur la carte
-  const PICKUP_TYPES = ['boost', 'speed', 'lift', 'coin'];
+  const PICKUP_TYPES = ['boost', 'speed', 'lift', 'coin', 'bird', 'balloon', 'star', 'diamond', 'jet'];
 
   function makeRng(seed) {
     let a = seed >>> 0;
@@ -196,22 +207,58 @@
     return { pickups: [], genX: 28, rng: makeRng(seed || (Math.random() * 1e9)), stats };
   }
 
-  function generate(world, untilX) {
+  // Bonus disponibles selon l'altitude (au-dessus du sol) : [type, poids, altitude mini]
+  const SPAWN_TABLE = [
+    ['boost', 26, 0], ['speed', 24, 0], ['lift', 24, 0], ['coin', 24, 0],
+    ['birds', 26, 35], ['balloon', 14, 50], ['star', 10, 90], ['diamond', 12, 90], ['jet', 16, 130],
+  ];
+
+  function pickType(r, alt) {
+    const pool = SPAWN_TABLE.filter(t => alt >= t[2]);
+    let tot = 0;
+    for (const t of pool) tot += t[1];
+    let v = r() * tot;
+    for (const t of pool) { v -= t[1]; if (v <= 0) return t[0]; }
+    return pool[0][0];
+  }
+
+  // planeAlt : altitude actuelle de l'avion, pour placer des bonus là où il vole
+  function generate(world, untilX, planeAlt) {
     const r = world.rng, s = world.stats;
+    const pa = Math.max(0, planeAlt || 0);
     while (world.genX < untilX) {
       const x = world.genX;
-      const roll = r();
-      const alt = 2.5 + Math.pow(r(), 1.35) * s.spawnAlt;
+      let alt;
+      if (r() < 0.7) {
+        // autour de l'altitude de l'avion (un peu en dessous : il descend en planant)
+        alt = pa - 6 + (r() + r() - 1) * Math.max(16, Math.min(40, pa * 0.22));
+      } else {
+        alt = 2.5 + Math.pow(r(), 1.35) * Math.max(s.spawnAlt, pa * 1.3);
+      }
+      alt = Math.max(2.5, alt);
       const y = ground(x) + alt;
-      if (roll < 0.26) world.pickups.push({ type: 'boost', x, y, r: 1.3 });
-      else if (roll < 0.5) world.pickups.push({ type: 'speed', x, y, r: 1.3 });
-      else if (roll < 0.74) world.pickups.push({ type: 'lift', x, y, r: 1.4 });
-      else {
-        // Arc de pièces
-        const n = 5;
+      const type = pickType(r, alt);
+      const P = world.pickups;
+      if (type === 'coin' || type === 'diamond') {
+        const n = type === 'coin' ? 5 : 3;
         for (let i = 0; i < n; i++) {
-          world.pickups.push({ type: 'coin', x: x + i * 2.6, y: y + Math.sin((i / (n - 1)) * Math.PI) * 2.5, r: 0.9 });
+          P.push({ type, x: x + i * 2.6, y: y + Math.sin((i / Math.max(1, n - 1)) * Math.PI) * 2.5, r: type === 'coin' ? 0.9 : 1.1 });
         }
+      } else if (type === 'birds') {
+        // Nuée d'oiseaux en V, qui volent lentement dans un sens ou dans l'autre
+        const n = 3 + Math.floor(r() * 3);
+        const vx = (r() < 0.5 ? -1 : 1) * (3 + r() * 4);
+        const dir = Math.sign(vx);
+        for (let i = 0; i < n; i++) {
+          const k = Math.ceil(i / 2) * (i % 2 ? 1 : -1);
+          P.push({ type: 'bird', x: x - dir * Math.abs(k) * 2.2, y: y + k * 1.6, r: 1.0, vx, phase: r() * 6 });
+        }
+      } else if (type === 'balloon') {
+        P.push({ type: 'balloon', x, y, r: 2.6, vy: 0.6, hue: Math.floor(r() * 4) });
+      } else if (type === 'jet') {
+        P.push({ type: 'jet', x, y, len: 70 + r() * 70, h: 6 });
+      } else {
+        P.push({ type, x, y, r: type === 'lift' ? 1.4 : type === 'star' ? 1.5 : 1.3 });
       }
       // Les bonus se raréfient avec la distance
       world.genX += (24 + r() * 26) * (1 + x / 900) / s.density;
@@ -220,21 +267,38 @@
     if (world.pickups.length > 200) world.pickups = world.pickups.filter(pk => !pk.taken);
   }
 
-  // Aimant + collecte. Renvoie la liste des bonus ramassés.
+  const NO_MAGNET = { bird: 1, balloon: 1, jet: 1 };
+
+  // Déplacement des bonus mobiles, aimant + collecte. Renvoie la liste des bonus ramassés.
   function collect(world, p, s, dt) {
     const got = [];
+    p.inJet = false;
+    for (const pk of world.pickups) {
+      if (pk.vx) pk.x += pk.vx * dt;
+      if (pk.vy) pk.y += pk.vy * dt;
+    }
     if (p.state !== 'flying' && p.state !== 'sliding') return got;
     for (const pk of world.pickups) {
       if (pk.taken) continue;
+      if (pk.type === 'jet') {
+        if (p.x > pk.x + pk.len + 40) { pk.taken = true; continue; }
+        if (p.state === 'flying' && p.x >= pk.x && p.x <= pk.x + pk.len && Math.abs(p.y - pk.y) < pk.h) {
+          p.inJet = true;
+          if (!pk.entered) { pk.entered = true; got.push(pk); p.pickups++; }
+        }
+        continue;
+      }
       const dx = p.x - pk.x, dy = p.y - pk.y;
       if (dx > 40) { pk.taken = true; pk.missed = true; continue; }
+      if (pk.used) continue;
       if (dx < -s.magnet - 5) continue;
       const d = Math.hypot(dx, dy);
       if (d < pk.r + 0.9) {
-        pk.taken = true;
+        if (pk.type === 'balloon') pk.used = true; // la montgolfière reste visible
+        else pk.taken = true;
         got.push(pk);
         applyPickup(p, s, pk.type);
-      } else if (d < s.magnet) {
+      } else if (d < s.magnet && !NO_MAGNET[pk.type]) {
         const pull = Math.min(1, (60 * dt) / Math.max(d, 0.5)) * 0.6;
         pk.x += dx * pull + p.vx * dt * 0.9;
         pk.y += dy * pull + p.vy * dt * 0.9;
@@ -255,6 +319,16 @@
       startLift(p, s, 11 * s.bonus, 0.9);
     } else if (type === 'coin') {
       p.coins++;
+    } else if (type === 'diamond') {
+      p.coins += 5;
+    } else if (type === 'bird') {
+      // petit coup de pouce vers le haut (cumulable si on traverse toute la nuée)
+      const remaining = p.liftT > 0 ? p.liftRate0 * p.liftT * p.liftT / (2 * p.liftDur) : 0;
+      startLift(p, s, remaining + 4 * s.bonus, 0.6);
+    } else if (type === 'balloon') {
+      startLift(p, s, 18 * s.bonus, 1.2);
+    } else if (type === 'star') {
+      p.starT = Math.max(p.starT, 4.5);
     }
   }
 

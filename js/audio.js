@@ -70,6 +70,11 @@
       else if (type === 'boost') { tone(300, 0.25, 'sawtooth', 0.12, 900); }
       else if (type === 'speed') { tone(500, 0.2, 'triangle', 0.25, 1500); noise(0.25, 0.15, 3000, 1); }
       else if (type === 'lift') { tone(400, 0.35, 'sine', 0.3, 1200); }
+      else if (type === 'bird') { tone(2200, 0.06, 'sine', 0.12, 3200); tone(2600, 0.07, 'sine', 0.1, 3600, 0.07); }
+      else if (type === 'balloon') { tone(220, 0.3, 'sine', 0.4, 520); tone(330, 0.25, 'triangle', 0.15, 700, 0.05); }
+      else if (type === 'star') { [1047, 1319, 1568, 2093].forEach((f, i) => tone(f, 0.22, 'triangle', 0.15, null, i * 0.06)); }
+      else if (type === 'diamond') { tone(1568, 0.1, 'square', 0.08); tone(2093, 0.2, 'square', 0.08, null, 0.08); }
+      else if (type === 'jet') { noise(0.8, 0.25, 600, 0.7, 2500); }
     },
     bounce() { tone(180, 0.18, 'sine', 0.4, 90); },
     land() { noise(0.35, 0.3, 300, 0.7, 120); },

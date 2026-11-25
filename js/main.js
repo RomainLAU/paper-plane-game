@@ -11,7 +11,7 @@
     mode: 'menu',     // menu | play | results
     paused: false,
     stats: null, plane: null, world: null,
-    trail: [], particles: [],
+    trail: [], particles: [], floaters: [],
     aim: { active: false, angle: 0.5, power: 0, preview: [], sx: 0, sy: 0, pid: null },
     time: 0, acc: 0, endTimer: 0, banked: false,
     record: 0, lastDistance: 0,
@@ -27,7 +27,7 @@
     S.stats = Data.computeStats(Save.data);
     S.plane = Physics.newPlane(S.stats);
     S.world = Physics.newWorld(S.stats);
-    S.trail = []; S.particles = [];
+    S.trail = []; S.particles = []; S.floaters = [];
     S.aim.active = false; S.aim.preview = [];
     S.endTimer = 0; S.banked = false; S.acc = 0;
     S.drawAngle = null;
@@ -132,7 +132,12 @@
       S.particles.push({ x, y, vx: Math.cos(a) * v + S.plane.vx * 0.5, vy: Math.sin(a) * v + S.plane.vy * 0.5, life: 0.6, max: 0.6, color, size: 3 + Math.random() * 3, g: 0 });
     }
   }
-  const PK_COLOR = { boost: '#ff8a2b', speed: '#ffd23f', lift: '#5be37a', coin: '#ffe066' };
+  const PK_COLOR = { boost: '#ff8a2b', speed: '#ffd23f', lift: '#5be37a', coin: '#ffe066', bird: '#e8e8f0', balloon: '#ff7a7a', star: '#ffe14d', diamond: '#7fe3ff', jet: '#ffffff' };
+  const PK_TEXT = { boost: '🔥 Boost', speed: '⚡ Vitesse', lift: '⏫ Ascendance', bird: '🐦 Hop !', balloon: '🎈 Boing !', star: '⭐ Étoile !', diamond: '💎 +5', jet: '🌬️ Courant-jet !' };
+  function floater(x, y, text, color) {
+    S.floaters.push({ x, y, text, color, life: 1.1, max: 1.1 });
+    if (S.floaters.length > 12) S.floaters.shift();
+  }
 
   // ---------------------------------------------------------------- Visée
   function updateAim(cx, cy) {
@@ -142,7 +147,7 @@
     const { W, H } = Renderer.size();
     a.power = Math.min(1, len / (Math.min(W, H) * 0.4));
     let ang = Math.atan2(pullY, pullX);
-    a.angle = Math.max(-0.35, Math.min(1.3, ang));
+    a.angle = Math.max(-0.35, Math.min(Math.PI / 4, ang)); // 45° max
     // Trajectoire prévue
     const ghost = Object.assign({}, S.plane, { uses: {} });
     Physics.launch(ghost, S.stats, a.angle, a.power);
@@ -273,8 +278,13 @@
           const got = Physics.collect(S.world, p, S.stats, STEP);
           for (const pk of got) {
             Sfx.pickup(pk.type);
-            if (pk.type !== 'coin') UI.vibrate(15);
-            burst(pk.x, pk.y, PK_COLOR[pk.type], pk.type === 'coin' ? 6 : 14, 8);
+            if (pk.type !== 'coin') UI.vibrate(pk.type === 'star' || pk.type === 'balloon' ? 30 : 15);
+            if (pk.type === 'balloon') pk.usedAt = S.time;
+            const bx = pk.type === 'jet' ? p.x : pk.x, by = pk.type === 'jet' ? p.y : pk.y;
+            if (pk.type !== 'jet') burst(bx, by, PK_COLOR[pk.type], pk.type === 'coin' ? 6 : pk.type === 'star' ? 24 : 14, 8);
+            if (PK_TEXT[pk.type] && (pk.type !== 'bird' || !S.floaters.some(f => f.text === PK_TEXT.bird && f.life > 0.6))) {
+              floater(p.x, p.y + 2.5, PK_TEXT[pk.type], pk.type === 'star' ? '#ffe14d' : '#ffffff');
+            }
           }
         }
         for (const e of ev) {
@@ -313,14 +323,17 @@
         q.x += q.vx * dt; q.y += q.vy * dt;
       }
       const { W } = Renderer.size();
-      Physics.generate(S.world, p.x + W / Renderer.cam.ppm + 80);
+      // Bonus générés juste hors de l'écran, autour de l'altitude actuelle de l'avion
+      Physics.generate(S.world, Math.max(p.x + 60, Renderer.cam.left + W / Renderer.cam.ppm + 12), p.state === 'aim' ? S.stats.launchHeight : p.y - Physics.ground(p.x));
+      if (p.state === 'aim') Physics.collect(S.world, p, S.stats, dt); // fait bouger oiseaux et montgolfières
+      for (let i = S.floaters.length - 1; i >= 0; i--) { S.floaters[i].life -= dt; if (S.floaters[i].life <= 0) S.floaters.splice(i, 1); }
       Renderer.updateCamera(p, S.stats, dt, false);
       UI.updateHud(p, S.stats, S.record, liveMoney());
     }
 
     if (p) {
       Renderer.draw({
-        plane: p, stats: S.stats, world: S.world, trail: S.trail, particles: S.particles,
+        plane: p, stats: S.stats, world: S.world, trail: S.trail, particles: S.particles, floaters: S.floaters,
         aim: S.mode === 'play' && p.state === 'aim' ? S.aim : null,
         time: S.time, record: S.record, lastDistance: S.lastDistance, paused: S.paused || S.mode !== 'play',
         get drawAngle() { return S.drawAngle; }, set drawAngle(v) { S.drawAngle = v; },

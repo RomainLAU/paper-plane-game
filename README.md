@@ -19,10 +19,22 @@ Aucune dépendance, aucune étape de build : HTML + CSS + JavaScript.
 Planer fait monter le nez de l'avion : il ralentit et descend moins vite… mais s'il va trop lentement, il décroche !
 
 ### Bonus sur la carte
-- 🔥 **orange** : recharge le boost
-- ⚡ **jaune** : regain de vitesse
-- ⏫ **vert** : courant ascendant (reprend de l'altitude)
-- 💲 **pièces** : argent en plus
+Les bonus apparaissent autour de l'altitude où vole l'avion, et de nouveaux types se débloquent en montant :
+
+| Altitude | Bonus | Effet |
+|---|---|---|
+| partout | 🔥 orange | recharge le boost |
+| partout | ⚡ jaune | regain de vitesse |
+| partout | ⏫ vert | courant ascendant (reprend de l'altitude sans perdre de vitesse) |
+| partout | 💲 pièces | argent en plus |
+| > 35 m | 🐦 oiseaux | chaque oiseau touché fait remonter un peu |
+| > 50 m | 🎈 montgolfière | gros rebond vers le haut |
+| > 90 m | ⭐ étoile | garde l'altitude pendant 4,5 s et accélère |
+| > 90 m | 💎 diamants | valent 5 pièces |
+| > 130 m | 🌬️ courant-jet | bande de vent : reste dedans pour accélérer |
+
+### Vol
+Quand l'avion va plus vite que sa vitesse de croisière, il monte (45° maximum) ; quand il ralentit, il se remet à plat en douceur puis plane. Trop lent, il pique pour reprendre de la vitesse.
 
 ### Améliorations (argent)
 Lancer puissant, Tremplin (hauteur de départ), Ailes planeuses (garde la hauteur), Pliage aérodynamique (vitesse), Réservoir de boost, Turbine (puissance du boost), Aimant à bonus, Bonus renforcés, Prime au mètre.

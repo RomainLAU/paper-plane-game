@@ -135,6 +135,9 @@
       <div class="opt-row"><span>📥 Restaurer une sauvegarde</span><button class="btn" data-opt="import">Importer</button></div>
       <div id="import-box" class="hidden"><textarea class="code" id="import-code" placeholder="Colle ton code ici (AP1-...)"></textarea><button class="btn primary" data-opt="do-import" style="margin-top:6px;width:100%">Restaurer</button></div>
       <div class="opt-note">🎮 <b>Commandes</b> — Glisse vers l'arrière puis relâche pour lancer. Maintiens l'écran (ou <b>Espace</b>) pour ralentir et planer. Bouton 🔥 (ou <b>B</b> / <b>Maj</b>) pour booster. Compétences actives : bouton en bas à gauche (ou <b>1</b>, <b>2</b>, <b>3</b>). Pause : <b>Échap</b>.</div>
+      <div class="opt-note">🎁 <b>Bonus</b> — Partout : 🔥 recharge le boost · ⚡ vitesse · ⏫ courant ascendant · 💲 pièces.<br>
+        Plus de 35 m : 🐦 oiseaux (chacun fait remonter un peu) · plus de 50 m : 🎈 montgolfière (gros rebond vers le haut) ·
+        plus de 90 m : ⭐ étoile (garde ton altitude et accélère) et 💎 diamants · plus de 130 m : 🌬️ courant-jet (reste dedans pour accélérer).</div>
       <div class="opt-row"><span>📊 ${d.runs} lancers · ${fmt(d.totalDistance)} m au total</span></div>
       <div class="opt-row"><span>🗑️ Effacer la progression</span><button class="btn danger" data-opt="reset">Réinitialiser</button></div>
     </div>`;

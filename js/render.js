@@ -292,12 +292,21 @@
   // ---------------------------------------------------------------- Bonus
   const PK_COLORS = { boost: ['#ff9a3c', '#ff5a1f'], speed: ['#ffe24a', '#f5a400'], lift: ['#6ef08a', '#1fae4a'], coin: ['#ffe680', '#e0a800'] };
 
+  const SPECIAL = {};
+
   function drawPickups(world, time) {
     const right = cam.left + W / cam.ppm;
+    // Courants-jets d'abord (zones derrière le reste)
     for (const pk of world.pickups) {
-      if (pk.taken || pk.x < cam.left - 3 || pk.x > right + 3) continue;
+      if (pk.type !== 'jet' || pk.taken || pk.x + pk.len < cam.left || pk.x > right) continue;
+      SPECIAL.jet(pk, time);
+    }
+    for (const pk of world.pickups) {
+      if (pk.type === 'jet') continue;
+      if (pk.taken || pk.x < cam.left - 6 || pk.x > right + 6) continue;
       const x = sx(pk.x), y = sy(pk.y);
-      if (y < -40 || y > H + 40) continue;
+      if (y < -80 || y > H + 80) continue;
+      if (SPECIAL[pk.type]) { SPECIAL[pk.type](pk, x, y, time); continue; }
       const isCoin = pk.type === 'coin';
       const R = Math.max(pk.r * cam.ppm, isCoin ? 9 : 15);
       const [c1, c2] = PK_COLORS[pk.type];
@@ -320,6 +329,168 @@
       ctx.stroke();
       drawPickupIcon(pk.type, x, y, R);
     }
+  }
+
+  SPECIAL.bird = (pk, x, y, time) => {
+    const S = Math.max(1.1 * cam.ppm, 16);
+    const flap = Math.sin(time * 11 + pk.phase);
+    const dir = pk.vx < 0 ? -1 : 1;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(dir, 1);
+    ctx.fillStyle = '#2d3446';
+    ctx.strokeStyle = '#2d3446';
+    ctx.lineWidth = Math.max(2, S * 0.16);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-S * 0.9, -flap * S * 0.55);
+    ctx.quadraticCurveTo(-S * 0.4, -S * 0.25 - flap * S * 0.2, 0, 0);
+    ctx.quadraticCurveTo(S * 0.4, -S * 0.25 - flap * S * 0.2, S * 0.9, -flap * S * 0.55);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(S * 0.1, S * 0.05, S * 0.32, S * 0.14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffb02e';
+    ctx.beginPath();
+    ctx.moveTo(S * 0.42, 0); ctx.lineTo(S * 0.62, S * 0.05); ctx.lineTo(S * 0.42, S * 0.12);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  const BALLOON_COLORS = [['#ff5d5d', '#ffd23f'], ['#3d8ff0', '#ffffff'], ['#8a5cff', '#5be37a'], ['#ff8a2b', '#3dd6f0']];
+  SPECIAL.balloon = (pk, x, y, time) => {
+    const R = Math.max(2.6 * cam.ppm, 24);
+    const [c1, c2] = BALLOON_COLORS[pk.hue % 4];
+    const squash = pk.used ? 1 + 0.12 * Math.max(0, Math.sin(time * 14)) * Math.exp(-((time - (pk.usedAt || time)) * 3)) : 1;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.globalAlpha = pk.used ? 0.75 : 1;
+    // cordes + nacelle
+    ctx.strokeStyle = '#6b4a2b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.45, R * 0.75); ctx.lineTo(-R * 0.22, R * 1.35);
+    ctx.moveTo(R * 0.45, R * 0.75); ctx.lineTo(R * 0.22, R * 1.35);
+    ctx.stroke();
+    ctx.fillStyle = '#a86d3d';
+    ctx.fillRect(-R * 0.25, R * 1.33, R * 0.5, R * 0.32);
+    // enveloppe à rayures
+    ctx.scale(1 / squash, squash);
+    ctx.beginPath();
+    ctx.moveTo(0, R * 0.95);
+    ctx.bezierCurveTo(-R * 1.3, R * 0.2, -R * 1.05, -R * 1.05, 0, -R * 1.05);
+    ctx.bezierCurveTo(R * 1.05, -R * 1.05, R * 1.3, R * 0.2, 0, R * 0.95);
+    ctx.fillStyle = c1;
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = c2;
+    for (let k = -2; k <= 2; k += 2) ctx.fillRect(k * R * 0.3 - R * 0.15, -R * 1.2, R * 0.3, R * 2.4);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.ellipse(-R * 0.35, -R * 0.45, R * 0.25, R * 0.45, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.restore();
+  };
+
+  SPECIAL.star = (pk, x, y, time) => {
+    const R = Math.max(pk.r * cam.ppm, 17);
+    const glow = ctx.createRadialGradient(x, y, R * 0.2, x, y, R * 2.2);
+    glow.addColorStop(0, 'rgba(255,240,150,0.8)');
+    glow.addColorStop(1, 'rgba(255,240,150,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(x, y, R * 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(time * 1.5);
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const rr = i % 2 ? R * 0.45 : R;
+      const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+      ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#ffd23f';
+    ctx.fill();
+    ctx.strokeStyle = '#fff6c2';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  SPECIAL.diamond = (pk, x, y, time) => {
+    const R = Math.max(pk.r * cam.ppm, 11);
+    const bob = Math.sin(time * 4 + pk.x) * R * 0.15;
+    ctx.save();
+    ctx.translate(x, y + bob);
+    ctx.fillStyle = 'rgba(120,230,255,0.3)';
+    ctx.beginPath(); ctx.arc(0, 0, R * 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0, -R); ctx.lineTo(R * 0.8, -R * 0.2); ctx.lineTo(0, R); ctx.lineTo(-R * 0.8, -R * 0.2);
+    ctx.closePath();
+    ctx.fillStyle = '#5fdcff';
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.8, -R * 0.2); ctx.lineTo(R * 0.8, -R * 0.2);
+    ctx.moveTo(0, -R); ctx.lineTo(-R * 0.25, -R * 0.2); ctx.lineTo(0, R); ctx.lineTo(R * 0.25, -R * 0.2); ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  SPECIAL.jet = (pk, time) => {
+    const x0 = sx(pk.x), x1 = sx(pk.x + pk.len);
+    const yc = sy(pk.y), hh = Math.max(pk.h * cam.ppm, 12);
+    if (yc + hh < 0 || yc - hh > H) return;
+    const g = ctx.createLinearGradient(0, yc - hh, 0, yc + hh);
+    g.addColorStop(0, 'rgba(200,235,255,0)');
+    g.addColorStop(0.5, 'rgba(200,235,255,0.35)');
+    g.addColorStop(1, 'rgba(200,235,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x0, yc - hh, x1 - x0, hh * 2);
+    // traits de vent qui défilent vers la droite
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    const spacing = 9;
+    for (let row = -2; row <= 2; row++) {
+      const yy = yc + row * hh * 0.35;
+      const off = ((time * 25 + row * 3.7) % spacing + spacing) % spacing;
+      for (let m = off; m < pk.len; m += spacing) {
+        const a = sx(pk.x + m), b = sx(pk.x + Math.min(pk.len, m + 3.5));
+        if (b < 0 || a > W) continue;
+        ctx.moveTo(a, yy); ctx.lineTo(b, yy);
+      }
+    }
+    ctx.stroke();
+    // flèches aux extrémités
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.font = `bold ${Math.max(12, Math.min(20, hh * 0.5))}px system-ui, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    if (x0 > -40 && x0 < W) ctx.fillText('»»', x0 + 4, yc);
+  };
+
+  function drawFloaters(list) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const f of list) {
+      const a = Math.max(0, Math.min(1, f.life / f.max * 1.5));
+      ctx.globalAlpha = a;
+      ctx.font = 'bold 16px system-ui, sans-serif';
+      const x = sx(f.x), y = sy(f.y) - (1 - f.life / f.max) * 30;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.strokeText(f.text, x, y);
+      ctx.fillStyle = f.color || '#fff';
+      ctx.fillText(f.text, x, y);
+    }
+    ctx.globalAlpha = 1;
   }
 
   function drawPickupIcon(type, x, y, R) {
@@ -436,6 +607,21 @@
       }
     }
     ctx.restore();
+    // Étoile : halo doré scintillant
+    if (p.starT > 0) {
+      ctx.strokeStyle = `rgba(255,215,60,${0.6 + 0.3 * Math.sin(time * 12)})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x, y, L * 0.8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#fff3a0';
+      for (let i = 0; i < 4; i++) {
+        const a = time * 4 + i * Math.PI / 2;
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(a) * L * 0.8, y + Math.sin(a) * L * 0.8, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
     // Bulle "vol plané" / "ascension"
     if (p.glideT > 0 || p.liftT > 0) {
       ctx.strokeStyle = p.glideT > 0 ? 'rgba(150,220,255,0.8)' : 'rgba(120,255,150,0.8)';
@@ -551,6 +737,7 @@
     drawPickups(st.world, st.time);
     drawTrail(st.trail);
     drawParticles(st.particles);
+    if (st.floaters) drawFloaters(st.floaters);
     let angle;
     if (p.state === 'aim') angle = st.aim && st.aim.active ? st.aim.angle : 0.2;
     else if (p.state === 'flying') angle = Math.atan2(p.vy + (p.liftRate || 0) * 0.5, p.vx) + (p.gliding ? 0.15 : 0);
