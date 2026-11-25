@@ -1,6 +1,6 @@
 /* Service worker : le jeu fonctionne hors-ligne une fois chargé.
-   Stratégie "stale-while-revalidate" : réponse immédiate depuis le cache, mise à jour en arrière-plan. */
-const CACHE = 'aeropapier-v3';
+   Stratégie "réseau d'abord" : toujours la dernière version en ligne, le cache sert seulement hors-ligne. */
+const CACHE = 'aeropapier-v4';
 const ASSETS = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
   'js/data.js', 'js/physics.js', 'js/save.js', 'js/audio.js', 'js/render.js', 'js/ui.js', 'js/main.js',
@@ -8,7 +8,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(a => new Request(a, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -21,13 +21,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
-    caches.open(CACHE).then(async cache => {
-      const cached = await cache.match(e.request, { ignoreSearch: true });
-      const network = fetch(e.request).then(res => {
-        if (res && res.ok) cache.put(e.request, res.clone());
-        return res;
-      }).catch(() => cached);
-      return cached || network;
-    })
+    fetch(e.request, { cache: 'no-cache' }).then(res => {
+      if (res && res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+      return res;
+    }).catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match('index.html')))
   );
 });

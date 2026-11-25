@@ -49,6 +49,7 @@
   }
 
   function toHangar() {
+    if (S.updatePending) { location.reload(); return; }
     S.mode = 'menu';
     S.paused = false;
     UI.hideResults(); UI.hidePause(); UI.hint(null);
@@ -356,7 +357,14 @@
     requestAnimationFrame(t => { last = t; frame(t); });
 
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      const hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').then(reg => reg.update()).catch(() => {});
+      // Nouvelle version installée : on recharge tout de suite si on est au hangar, sinon au retour au hangar
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController) return;
+        if (S.mode === 'menu') location.reload();
+        else S.updatePending = true;
+      });
     }
   }
   boot();
