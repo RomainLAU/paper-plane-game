@@ -10,13 +10,63 @@
   const TRACK_GAIN = 2.5;   // vitesse à laquelle l'avion rejoint la pente visée (1/s)
   const TURN_RATE = 1.2;    // rotation max (rad/s)
 
-  // ---------------------------------------------------------------- Terrain
-  function ground(x) {
+  // ---------------------------------------------------------------- Terrain (dépend de la carte)
+  let TERRAIN = 'hills';
+  function setTerrain(t) { TERRAIN = t || 'hills'; }
+  function hash(n) { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); }
+
+  function hills(x) {
     if (x < 15) return 0;
     const ramp = Math.min(1, (x - 15) / 50);
     const h = 2 + 1.6 * Math.sin(x / 41) + 1.1 * Math.sin(x / 17 + 1.3) + 2.2 * Math.sin(x / 113 + 0.5)
       + 1.5 * Math.sin(x / 271 + 2.1);
     return Math.max(0, h) * ramp;
+  }
+  function dunes(x) {
+    if (x < 15) return 0;
+    const ramp = Math.min(1, (x - 15) / 60);
+    const h = 3 + 3 * Math.sin(x / 63) + 1.2 * Math.sin(x / 23 + 2) + 2 * Math.sin(x / 151 + 1);
+    return Math.max(0, h) * ramp;
+  }
+  // Montagnes : collines + grands pics (de plus en plus hauts) à survoler
+  const PEAK_CELL = 230;
+  function peaks(x) {
+    let h = hills(x) * 0.8;
+    const i0 = Math.floor(x / PEAK_CELL);
+    for (let i = i0 - 1; i <= i0 + 1; i++) {
+      if (i < 1) continue;
+      const c = i * PEAK_CELL + 60 + hash(i * 3.3) * 80;
+      const w = 30 + hash(i * 7.1) * 30;
+      const hh = (16 + hash(i * 1.9) * 30) * Math.min(1.6, 0.6 + i * 0.15);
+      const d = (x - c) / w;
+      h = Math.max(h, hh * Math.exp(-d * d) + hills(x) * 0.3);
+    }
+    return h;
+  }
+  // Archipel : fond marin à -5 m, des îles de temps en temps (l'île de départ porte la tour)
+  const ISLAND_CELL = 170;
+  function islands(x) {
+    if (x < 18) return 0;
+    if (x < 34) return -5 * ((x - 18) / 16);
+    let h = -5;
+    const i0 = Math.floor(x / ISLAND_CELL);
+    for (let i = i0 - 1; i <= i0 + 1; i++) {
+      if (i < 1) continue;
+      const c = i * ISLAND_CELL + 40 + hash(i * 5.1) * 70;
+      const hw = 14 + hash(i * 2.7) * 16;
+      const top = 2 + hash(i * 8.3) * 2.5;
+      const d = Math.abs(x - c) / hw;
+      if (d < 1) h = Math.max(h, -5 + (top + 5) * Math.min(1, (1 - d * d) * 1.8));
+    }
+    return h;
+  }
+  function ground(x) {
+    switch (TERRAIN) {
+      case 'dunes': return dunes(x);
+      case 'peaks': return peaks(x);
+      case 'islands': return islands(x);
+      default: return hills(x);
+    }
   }
 
   // ---------------------------------------------------------------- Avion
@@ -27,6 +77,8 @@
       fuel: stats.tank,
       boosting: false, gliding: false,
       liftT: 0, liftDur: 1, liftRate0: 0, liftRate: 0, nitroT: 0, glideT: 0, starT: 0, inJet: false,
+      inSand: false, sink: 0,
+      regenLeft: stats.regenBudget || 0, sinceBoost: 9,
       bouncesLeft: stats.bounces,
       maxX: 0, time: 0,
       coins: 0, pickups: 0,
@@ -129,14 +181,23 @@
         thrust += s.thrust;
         p.fuel = Math.max(0, p.fuel - dt);
         p.boosting = true;
-      } else if (s.regen > 0) {
-        p.fuel = Math.min(s.tank, p.fuel + s.regen * dt);
+        p.sinceBoost = 0;
+      } else {
+        // Recharge : seulement après 1,5 s sans booster, et dans la limite d'un budget par vol
+        p.sinceBoost += dt;
+        if (s.regen > 0 && p.regenLeft > 0 && p.sinceBoost > 1.5 && p.fuel < s.tank) {
+          const add = Math.min(s.regen * dt, p.regenLeft, s.tank - p.fuel);
+          p.fuel += add;
+          p.regenLeft -= add;
+        }
       }
       // Puissance limitée : le boost pousse moins fort quand l'avion va déjà très vite
       thrust *= Math.min(1, 16 / speed);
       if (p.starT > 0) { p.starT -= dt; thrust += 7 * Math.min(1, 30 / speed); }
       if (p.inJet) thrust += 9 * s.bonus * Math.min(1, 35 / speed);
 
+      D += s.headwind || 0;                       // vent de face
+      if (p.inSand) D = D * 2 + 1.5;              // tempête de sable
       const newSpeed = Math.max(0.5, speed + (thrust - D - g * Math.sin(gamma)) * dt);
       setVelocity(p, newSpeed, newGamma);
       if (holdAlt && p.vy < 0) p.vy = 0;
@@ -158,15 +219,24 @@
         p.y += p.liftRate * dt;
         p.liftT -= dt;
       }
+      if (p.sink > 0 && !holdAlt) p.y -= p.sink * dt; // rafale descendante : l'air plonge
 
       const gh = ground(p.x);
-      if (p.y <= gh) {
-        p.y = gh;
+      const water = s.map && s.map.water && gh < 0;
+      const floor = water ? 0 : gh;
+      if (p.y <= floor) {
+        p.y = floor;
         if (p.bouncesLeft > 0 && sp > 4) {
           p.bouncesLeft--;
           setVelocity(p, sp * s.bounceKeep, 0.42);
-          p.y = gh + 0.05;
-          ev.push('bounce');
+          p.y = floor + 0.05;
+          ev.push(water ? 'ricochet' : 'bounce');
+        } else if (water) {
+          // Plouf : l'eau arrête le vol
+          p.state = 'stopped';
+          p.vx = 0; p.vy = 0; p.y = 0;
+          p.boosting = false;
+          ev.push('splash');
         } else {
           p.state = 'sliding';
           p.vx = Math.max(p.vx, 0.5);
@@ -177,7 +247,8 @@
       }
     } else if (p.state === 'sliding') {
       p.gliding = false;
-      const dec = 5 + 0.08 * p.vx * p.vx;
+      const slope = ground(p.x + 0.5) - ground(p.x - 0.5);
+      const dec = 5 + 0.08 * p.vx * p.vx + Math.max(0, slope) * 14; // glisser en montée freine fort
       p.vx -= dec * dt;
       if (p.vx <= 0.2) {
         p.vx = 0;
@@ -186,6 +257,9 @@
       }
       p.x += p.vx * dt;
       p.y = ground(p.x);
+      if (s.map && s.map.water && p.y < 0) { // glisse jusque dans l'eau
+        p.y = 0; p.vx = 0; p.state = 'stopped'; ev.push('splash');
+      }
     }
     if (p.x > p.maxX) p.maxX = p.x;
   }
@@ -260,6 +334,23 @@
       } else {
         P.push({ type, x, y, r: type === 'lift' ? 1.4 : type === 'star' ? 1.5 : 1.3 });
       }
+      // Pièges de la carte (en plus des bonus)
+      const hz = (s.map && s.map.hazards) || [];
+      let hzTot = 0;
+      for (const h of hz) hzTot += h[1];
+      if (hzTot > 0 && x > 60 && r() < hzTot / 100) {
+        let v = r() * hzTot, hType = hz[0][0];
+        for (const h of hz) { v -= h[1]; if (v <= 0) { hType = h[0]; break; } }
+        const hx = x + 8 + r() * 12;
+        const halt = Math.max(3, pa - 4 + (r() + r() - 1) * Math.max(14, Math.min(35, pa * 0.2)));
+        const hy = ground(hx) + halt;
+        if (hType === 'sand') P.push({ type: 'sand', x: hx, y: hy, len: 45 + r() * 50, h: 7 });
+        else if (hType === 'down') P.push({ type: 'down', x: hx, y: hy, w: 12 + r() * 8, h: 22 });
+        else if (hType === 'gull') {
+          const n = 1 + Math.floor(r() * 3);
+          for (let i = 0; i < n; i++) P.push({ type: 'gull', x: hx + i * 4, y: hy + (r() - 0.5) * 5, r: 1.1, vx: -(4 + r() * 4), phase: r() * 6 });
+        } else if (hType === 'storm') P.push({ type: 'storm', x: hx, y: hy, r: 3.2, vx: -1.5, phase: r() * 10 });
+      }
       // Les bonus se raréfient avec la distance
       world.genX += (17 + r() * 21) * (1 + x / 900) / s.density;
     }
@@ -267,12 +358,15 @@
     if (world.pickups.length > 200) world.pickups = world.pickups.filter(pk => !pk.taken);
   }
 
-  const NO_MAGNET = { bird: 1, balloon: 1, jet: 1 };
+  const NO_MAGNET = { bird: 1, balloon: 1, jet: 1, gull: 1, storm: 1, sand: 1, down: 1 };
+  const ZONES = { jet: 1, sand: 1 };
 
   // Déplacement des bonus mobiles, aimant + collecte. Renvoie la liste des bonus ramassés.
   function collect(world, p, s, dt) {
     const got = [];
     p.inJet = false;
+    p.inSand = false;
+    p.sink = 0;
     for (const pk of world.pickups) {
       if (pk.vx) pk.x += pk.vx * dt;
       if (pk.vy) pk.y += pk.vy * dt;
@@ -280,11 +374,19 @@
     if (p.state !== 'flying' && p.state !== 'sliding') return got;
     for (const pk of world.pickups) {
       if (pk.taken) continue;
-      if (pk.type === 'jet') {
+      if (ZONES[pk.type]) {
         if (p.x > pk.x + pk.len + 40) { pk.taken = true; continue; }
         if (p.state === 'flying' && p.x >= pk.x && p.x <= pk.x + pk.len && Math.abs(p.y - pk.y) < pk.h) {
-          p.inJet = true;
-          if (!pk.entered) { pk.entered = true; got.push(pk); p.pickups++; }
+          if (pk.type === 'jet') p.inJet = true; else p.inSand = true;
+          if (!pk.entered) { pk.entered = true; got.push(pk); if (pk.type === 'jet') p.pickups++; }
+        }
+        continue;
+      }
+      if (pk.type === 'down') {
+        if (p.x > pk.x + pk.w + 40) { pk.taken = true; continue; }
+        if (p.state === 'flying' && Math.abs(p.x - pk.x) < pk.w / 2 && Math.abs(p.y - pk.y) < pk.h) {
+          p.sink = 9;
+          if (!pk.entered) { pk.entered = true; got.push(pk); }
         }
         continue;
       }
@@ -294,7 +396,7 @@
       if (dx < -s.magnet - 5) continue;
       const d = Math.hypot(dx, dy);
       if (d < pk.r + 0.9) {
-        if (pk.type === 'balloon') pk.used = true; // la montgolfière reste visible
+        if (pk.type === 'balloon' || pk.type === 'storm') pk.used = true; // reste visible
         else pk.taken = true;
         got.push(pk);
         applyPickup(p, s, pk.type);
@@ -329,8 +431,18 @@
       startLift(p, s, 18 * s.bonus, 1.2);
     } else if (type === 'star') {
       p.starT = Math.max(p.starT, 4.5);
+    } else if (type === 'gull') {
+      // Mouette : on la percute, on perd de la vitesse
+      p.pickups--;
+      const sp = Math.hypot(p.vx, p.vy);
+      setVelocity(p, sp * 0.72, Math.atan2(p.vy, p.vx) - 0.1);
+    } else if (type === 'storm') {
+      // Nuage électrique : décharge, grosse perte de vitesse
+      p.pickups--;
+      const sp = Math.hypot(p.vx, p.vy);
+      setVelocity(p, sp * 0.62, Math.min(Math.atan2(p.vy, p.vx), 0) - 0.25);
     }
   }
 
-  G.Physics = { GRAV, ground, newPlane, launch, step, useSkill, newWorld, generate, collect, PICKUP_TYPES };
+  G.Physics = { GRAV, ground, setTerrain, newPlane, launch, step, useSkill, newWorld, generate, collect, PICKUP_TYPES };
 })(typeof window !== 'undefined' ? window : globalThis);

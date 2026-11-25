@@ -39,6 +39,20 @@ Quand l'avion va plus vite que sa vitesse de croisière, il monte (45° maximum)
 ### Améliorations (argent)
 Lancer puissant, Tremplin (hauteur de départ), Ailes planeuses (garde la hauteur), Pliage aérodynamique (vitesse), Réservoir de boost, Turbine (puissance du boost), Aimant à bonus, Bonus renforcés, Prime au mètre.
 
+### Cartes
+Chaque carte est plus dure mais rapporte plus. Atteindre une certaine distance débloque la suivante :
+
+| Carte | Débloquée par | Gains | Difficultés |
+|---|---|---|---|
+| 🌾 Prairie | — | ×1 | — |
+| 🏜️ Désert | 600 m en Prairie | ×1,6 | gravité +10 %, vent de face, tempêtes de sable |
+| 🏔️ Montagnes | 700 m dans le Désert | ×2,3 | gravité +20 %, pics à survoler, rafales descendantes |
+| 🏝️ Archipel | 750 m en Montagnes | ×3 | gravité +25 %, l'eau arrête le vol (sauf rebond), mouettes |
+| ⛈️ Orage | 800 m dans l'Archipel | ×4 | gravité +35 %, pluie (frottements +30 %), nuages électriques |
+
+### Argent
+0,25 $ par mètre et 3 $ par pièce, multipliés par la Prime au mètre, la compétence Fortune et les gains de la carte.
+
 ### Personnalisation de l'avion (onglet « Avion »)
 L'avion **évolue avec ton niveau** (mode Auto) : Classique → Planeur (niv. 3) → Flèche (5) → Faucon (8) → Delta (12) → Jet (16) → Phénix (20).
 On peut aussi choisir son modèle, sa couleur (12), son motif (rayures, pois, étoiles, flammes, damier) et sa traînée (bleue, feu, néon, dorée, arc-en-ciel), débloqués en montant de niveau. C'est purement esthétique.
@@ -49,7 +63,7 @@ Prairie avec maisons, granges, moulins, plusieurs espèces d'arbres et ombres po
 ### Compétences (XP)
 Chaque niveau donne 1 point de compétence. On commence **sans aucun slot** ; les 3 slots se débloquent aux niveaux **2, 6 et 12**.
 Chaque compétence a 3 niveaux.
-- Passives : Rebond 🏀, Plume 🪶 (gravité réduite), Érudit 📚 (+XP), Super aimant 🌀, Fortune 💎 (+argent), Recharge ♻️ (boost qui se recharge), Chance 🍀 (plus de bonus)
+- Passives : Rebond 🏀, Plume 🪶 (gravité réduite), Érudit 📚 (+XP), Super aimant 🌀, Fortune 💎 (+argent), Recharge ♻️ (le boost se recharge après une pause, jusqu'à 1/2/3 s par vol), Chance 🍀 (plus de bonus)
 - Actives : Second lancer 🔁, Ascension 🌪️, Nitro ⚡, Vol plané 🛩️
 
 ## Sauvegarde
@@ -75,6 +89,7 @@ index.html             page + HUD + menus
 css/style.css          styles (paysage, zones sûres des encoches)
 js/data.js             améliorations, compétences, niveaux, calcul des stats
 js/planes.js           modèles d'avion, couleurs, motifs, traînées
+js/maps.js             cartes (difficulté, gains, pièges)
 js/physics.js          physique du vol (portance/traînée/décrochage), terrain, bonus
 js/render.js           rendu Canvas (ciel, parallaxe, décor, avion, effets)
 js/ui.js               hangar, onglets, résultats, pause, HUD

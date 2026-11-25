@@ -83,8 +83,9 @@
         <div class="xp-bar"><div id="m-xp-bar"></div></div>
         <div class="stat-row"><span>💰 Argent</span><b id="m-money">0</b></div>
         <div class="stat-row"><span>✨ Points</span><b id="m-points">0</b></div>
-        <div class="stat-row"><span>🏆 Record</span><b id="m-record">0 m</b></div>
+        <div class="stat-row"><span>🏆 Record (carte)</span><b id="m-record">0 m</b></div>
       </div>
+      <button class="btn map-btn" id="btn-map"><span id="m-map">🌾 Prairie</span><small>Changer de carte ▸</small></button>
       <button class="btn primary launch" id="btn-play">✈ LANCER</button>
     </div>
     <div class="menu-main">
@@ -101,6 +102,15 @@
     </div>
   </div>
 
+  <!-- ===================== Cartes ===================== -->
+  <div id="maps" class="overlay hidden">
+    <div class="panel wide">
+      <h2>Cartes</h2>
+      <div id="maps-list" class="maps-list"></div>
+      <button class="btn" id="btn-maps-close">Fermer</button>
+    </div>
+  </div>
+
   <!-- ===================== Orientation ===================== -->
   <div id="rotate">
     <div class="rotate-phone">📱</div>
@@ -111,6 +121,7 @@
 
   <script src="js/data.js"></script>
   <script src="js/physics.js"></script>
+  <script src="js/maps.js"></script>
   <script src="js/planes.js"></script>
   <script src="js/save.js"></script>
   <script src="js/audio.js"></script>

@@ -74,8 +74,15 @@
       else if (type === 'balloon') { tone(220, 0.3, 'sine', 0.4, 520); tone(330, 0.25, 'triangle', 0.15, 700, 0.05); }
       else if (type === 'star') { [1047, 1319, 1568, 2093].forEach((f, i) => tone(f, 0.22, 'triangle', 0.15, null, i * 0.06)); }
       else if (type === 'diamond') { tone(1568, 0.1, 'square', 0.08); tone(2093, 0.2, 'square', 0.08, null, 0.08); }
+      else if (type === 'storm') { Sfx.zap(); }
+      else if (type === 'gull') { Sfx.bonk(); }
+      else if (type === 'sand') { noise(0.6, 0.2, 500, 0.5, 300); }
+      else if (type === 'down') { tone(500, 0.4, 'sine', 0.2, 150); }
       else if (type === 'jet') { noise(0.8, 0.25, 600, 0.7, 2500); }
     },
+    splash(small) { noise(small ? 0.3 : 0.7, small ? 0.25 : 0.45, 900, 0.6, 250); if (!small) tone(300, 0.4, 'sine', 0.2, 80); },
+    zap() { noise(0.3, 0.35, 3000, 0.5, 600); tone(1200, 0.15, 'square', 0.08, 200); },
+    bonk() { tone(260, 0.15, 'square', 0.12, 120); },
     bounce() { tone(180, 0.18, 'sine', 0.4, 90); },
     land() { noise(0.35, 0.3, 300, 0.7, 120); },
     skill() { tone(600, 0.12, 'triangle', 0.25); tone(900, 0.2, 'triangle', 0.25, null, 0.08); },

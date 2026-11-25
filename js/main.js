@@ -3,7 +3,8 @@
   'use strict';
   const { Data, Physics, Save, Sfx, Renderer, UI } = G;
   const STEP = 1 / 120;
-  const COIN_VALUE = 10;
+  const COIN_VALUE = 3;     // $ par pièce
+  const MONEY_PER_M = 0.25; // $ par mètre
 
   const canvas = document.getElementById('game');
 
@@ -24,7 +25,11 @@
 
   // ---------------------------------------------------------------- Mise en place d'un vol
   function setupScene() {
-    S.stats = Data.computeStats(Save.data);
+    const d = Save.data;
+    S.map = G.Maps.byId(d.currentMap);
+    if (!G.Maps.isUnlocked(d, S.map.id)) S.map = G.Maps.MAPS[0];
+    Physics.setTerrain(S.map.terrain);
+    S.stats = G.Maps.apply(Data.computeStats(d), S.map);
     refreshLook();
     S.plane = Physics.newPlane(S.stats);
     S.world = Physics.newWorld(S.stats);
@@ -32,8 +37,9 @@
     S.aim.active = false; S.aim.preview = [];
     S.endTimer = 0; S.banked = false; S.acc = 0;
     S.drawAngle = null;
-    S.record = Save.data.record;
-    S.lastDistance = Save.data.lastDistance;
+    const mr = d.maps[S.map.id] || { best: 0, last: 0 };
+    S.record = mr.best;
+    S.lastDistance = mr.last;
     S.glidePointers.clear();
     S.boostHeld = false;
     Renderer.updateCamera(S.plane, S.stats, 0, true);
@@ -65,7 +71,7 @@
 
   function liveMoney() {
     const p = S.plane;
-    return Math.floor((Math.floor(p.maxX) + p.coins * COIN_VALUE) * S.stats.moneyMult);
+    return Math.floor((Math.floor(p.maxX) * MONEY_PER_M + p.coins * COIN_VALUE) * S.stats.moneyMult);
   }
 
   // Calcule et enregistre les gains du vol
@@ -83,8 +89,19 @@
     d.runs += 1;
     d.totalDistance += dist;
     d.lastDistance = dist;
-    const newRecord = dist > d.record;
-    if (newRecord) d.record = dist;
+    d.record = Math.max(d.record, dist);
+    const mr = d.maps[S.map.id] || (d.maps[S.map.id] = { unlocked: true, best: 0, last: 0 });
+    const newRecord = dist > mr.best;
+    if (newRecord) mr.best = dist;
+    mr.last = dist;
+    // Déblocage de la carte suivante
+    let newMap = null;
+    const idx = G.Maps.indexOf(S.map.id);
+    const next = G.Maps.MAPS[idx + 1];
+    if (next && S.map.unlockNext && dist >= S.map.unlockNext && !G.Maps.isUnlocked(d, next.id)) {
+      d.maps[next.id] = Object.assign(d.maps[next.id] || { best: 0, last: 0 }, { unlocked: true });
+      newMap = next;
+    }
     const after = Data.levelInfo(d.xp).level;
     Save.write();
     return {
@@ -92,6 +109,7 @@
       level: after, levelsGained: after - before,
       newSlots: Data.unlockedSlots(after) - Data.unlockedSlots(before),
       cosmetics: G.Planes.unlocksBetween(before, after),
+      newMap, map: S.map,
     };
   }
 
@@ -102,7 +120,7 @@
     Sfx.silence();
     if (!r) { toHangar(); return; }
     UI.showResults(r);
-    if (r.levelsGained > 0) { Sfx.levelUp(); UI.vibrate([30, 50, 30]); }
+    if (r.levelsGained > 0 || r.newMap) { Sfx.levelUp(); UI.vibrate([30, 50, 30]); }
     else if (r.newRecord) Sfx.record();
   }
 
@@ -139,8 +157,8 @@
       S.particles.push({ x, y, vx: Math.cos(a) * v + S.plane.vx * 0.5, vy: Math.sin(a) * v + S.plane.vy * 0.5, life: 0.6, max: 0.6, color, size: 3 + Math.random() * 3, g: 0 });
     }
   }
-  const PK_COLOR = { boost: '#ff8a2b', speed: '#ffd23f', lift: '#5be37a', coin: '#ffe066', bird: '#e8e8f0', balloon: '#ff7a7a', star: '#ffe14d', diamond: '#7fe3ff', jet: '#ffffff' };
-  const PK_TEXT = { boost: '🔥 Boost', speed: '⚡ Vitesse', lift: '⏫ Ascendance', bird: '🐦 Hop !', balloon: '🎈 Boing !', star: '⭐ Étoile !', diamond: '💎 +5', jet: '🌬️ Courant-jet !' };
+  const PK_COLOR = { boost: '#ff8a2b', speed: '#ffd23f', lift: '#5be37a', coin: '#ffe066', bird: '#e8e8f0', balloon: '#ff7a7a', star: '#ffe14d', diamond: '#7fe3ff', jet: '#ffffff' , sand: '#e0b96a', down: '#9fc4ff', gull: '#ffffff', storm: '#d9e4ff'};
+  const PK_TEXT = { boost: '🔥 Boost', speed: '⚡ Vitesse', lift: '⏫ Ascendance', bird: '🐦 Hop !', balloon: '🎈 Boing !', star: '⭐ Étoile !', diamond: '💎 +5', jet: '🌬️ Courant-jet !' , sand: '🌪️ Tempête de sable !', down: '⬇️ Rafale !', gull: '🐦 Aïe !', storm: '⚡ Zap !'};
   function floater(x, y, text, color) {
     S.floaters.push({ x, y, text, color, life: 1.1, max: 1.1 });
     if (S.floaters.length > 12) S.floaters.shift();
@@ -288,15 +306,17 @@
             if (pk.type !== 'coin') UI.vibrate(pk.type === 'star' || pk.type === 'balloon' ? 30 : 15);
             if (pk.type === 'balloon') pk.usedAt = S.time;
             const bx = pk.type === 'jet' ? p.x : pk.x, by = pk.type === 'jet' ? p.y : pk.y;
-            if (pk.type !== 'jet') burst(bx, by, PK_COLOR[pk.type], pk.type === 'coin' ? 6 : pk.type === 'star' ? 24 : 14, 8);
+            if (pk.type !== 'jet' && pk.type !== 'sand' && pk.type !== 'down') burst(bx, by, PK_COLOR[pk.type], pk.type === 'coin' ? 6 : pk.type === 'star' ? 24 : 14, 8);
             if (PK_TEXT[pk.type] && (pk.type !== 'bird' || !S.floaters.some(f => f.text === PK_TEXT.bird && f.life > 0.6))) {
-              floater(p.x, p.y + 2.5, PK_TEXT[pk.type], pk.type === 'star' ? '#ffe14d' : '#ffffff');
+              floater(p.x, p.y + 2.5, PK_TEXT[pk.type], pk.type === 'star' ? '#ffe14d' : ['gull', 'storm', 'down', 'sand'].includes(pk.type) ? '#ff8a8a' : '#ffffff');
             }
           }
         }
         for (const e of ev) {
           if (e === 'bounce') { Sfx.bounce(); UI.vibrate(30); burst(p.x, p.y, '#b08850', 10, 6); }
           else if (e === 'land') { Sfx.land(); UI.vibrate(40); burst(p.x, p.y, '#a07a48', 14, 5); }
+          else if (e === 'ricochet') { Sfx.splash(true); UI.vibrate(30); burst(p.x, p.y, '#bfe9ff', 14, 7); }
+          else if (e === 'splash') { Sfx.splash(false); UI.vibrate([40, 30, 40]); burst(p.x, 0.2, '#bfe9ff', 26, 9); floater(p.x, 3, '💦 Plouf !', '#ffffff'); }
         }
         // Fumée du boost
         if (p.boosting && Math.random() < 0.8) {
@@ -340,7 +360,7 @@
 
     if (p) {
       Renderer.draw({
-        plane: p, stats: S.stats, world: S.world, trail: S.trail, particles: S.particles, floaters: S.floaters, look: S.look,
+        plane: p, stats: S.stats, world: S.world, map: S.map, trail: S.trail, particles: S.particles, floaters: S.floaters, look: S.look,
         aim: S.mode === 'play' && p.state === 'aim' ? S.aim : null,
         time: S.time, record: S.record, lastDistance: S.lastDistance, paused: S.paused || S.mode !== 'play',
         get drawAngle() { return S.drawAngle; }, set drawAngle(v) { S.drawAngle = v; },
@@ -356,6 +376,7 @@
     await Save.init();
     UI.init({
       play, pause, resume, restart, quit, toHangar, useSkill, toggleFullscreen, refreshLook,
+      mapChanged: () => setupScene(),
       setBoost: v => { S.boostHeld = v; },
     });
     setupScene();

@@ -36,7 +36,9 @@
     $('m-xp-bar').style.width = `${(li.current / li.needed) * 100}%`;
     $('m-money').textContent = fmt(d.money);
     $('m-points').textContent = points;
-    $('m-record').textContent = `${fmt(d.record)} m`;
+    const map = G.Maps.byId(d.currentMap);
+    $('m-record').textContent = `${fmt((d.maps[map.id] || {}).best || 0)} m`;
+    $('m-map').textContent = `${map.icon} ${map.name}`;
     // Pastille sur l'onglet compétences s'il y a quelque chose à faire
     const nSlots = Data.unlockedSlots(li.level);
     const canBuy = Data.SKILLS.some(s => li.level >= s.req && (d.skills[s.id] || 0) < Data.SKILL_MAX && points >= Data.skillCost((d.skills[s.id] || 0) + 1));
@@ -268,6 +270,35 @@
     if (b) { Sfx.error(); toast(`🔒 Se débloque au niveau ${b.dataset.locked}`); }
   }
 
+  // ---------------------------------------------------------------- Cartes
+  function renderMaps() {
+    const d = Save.data, M = G.Maps;
+    let html = '';
+    M.MAPS.forEach((m, i) => {
+      const ok = M.isUnlocked(d, m.id);
+      const rec = (d.maps[m.id] || {}).best || 0;
+      const prev = M.MAPS[i - 1];
+      const prevBest = prev ? ((d.maps[prev.id] || {}).best || 0) : 0;
+      const sel = d.currentMap === m.id;
+      let lock = '';
+      if (!ok && prev) {
+        const pct = Math.min(100, (prevBest / prev.unlockNext) * 100);
+        lock = `<div class="map-lock"><span>🔒 Atteins <b>${prev.unlockNext} m</b> sur ${prev.icon} ${prev.name} (ton record : ${fmt(prevBest)} m)</span>
+          <div class="xp-bar"><div style="width:${pct}%;background:linear-gradient(90deg,#ffb347,#ff7a2b)"></div></div></div>`;
+      }
+      html += `<div class="map-card ${ok ? '' : 'locked'} ${sel ? 'sel' : ''} theme-${m.id}" ${ok ? `data-map="${m.id}"` : ''}>
+        <div class="map-icon">${m.icon}</div>
+        <div class="map-info">
+          <div class="map-name">${m.name} ${sel ? '<span class="type-badge passive">CHOISIE</span>' : ''}</div>
+          <div class="desc">${m.desc}</div>
+          <div class="map-tags"><span class="tag good">💰 Gains ×${m.reward}</span>${m.malus.map(x => `<span class="tag bad">${x}</span>`).join('')}</div>
+          ${ok ? `<div class="small muted">🏆 Record : ${fmt(rec)} m${m.unlockNext ? ` · ${m.unlockNext} m pour débloquer la suivante` : ''}</div>` : lock}
+        </div>
+      </div>`;
+    });
+    $('maps-list').innerHTML = html;
+  }
+
   function renderMenu() {
     renderProfile();
     if (currentTab === 'upgrades') renderUpgrades();
@@ -385,6 +416,7 @@
       if (newSkills.length) lv += `<br>Nouvelle${newSkills.length > 1 ? 's' : ''} compétence${newSkills.length > 1 ? 's' : ''} : ${newSkills.map(s => s.icon + ' ' + s.name).join(', ')}`;
     }
     if (r.cosmetics && r.cosmetics.length) lv += `<br>🎨 Débloqué : ${r.cosmetics.join(', ')}`;
+    if (r.newMap) lv += `${lv ? '<br>' : ''}🗺️ Nouvelle carte débloquée : ${r.newMap.icon} <b>${r.newMap.name}</b> ! (gains ×${r.newMap.reward})`;
     $('res-level').innerHTML = lv;
     $('results').classList.remove('hidden');
   }
@@ -483,6 +515,18 @@
       else if ((b = e.target.closest('[data-unequip-id]'))) unequip(Save.data.slots.indexOf(b.dataset.unequipId));
     });
     $('tab-plane').addEventListener('click', onLook);
+    $('btn-map').addEventListener('click', () => { Sfx.click(); renderMaps(); $('maps').classList.remove('hidden'); });
+    $('btn-maps-close').addEventListener('click', () => $('maps').classList.add('hidden'));
+    $('maps-list').addEventListener('click', e => {
+      const c = e.target.closest('[data-map]');
+      if (!c) { if (e.target.closest('.map-card.locked')) { Sfx.error(); toast('🔒 Carte pas encore débloquée'); } return; }
+      Save.data.currentMap = c.dataset.map;
+      Save.write();
+      Sfx.click();
+      H.mapChanged();
+      $('maps').classList.add('hidden');
+      renderMenu();
+    });
     $('tab-options').addEventListener('click', e => {
       const b = e.target.closest('[data-opt]');
       if (b) onOption(b.dataset.opt);

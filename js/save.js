@@ -20,6 +20,8 @@
       slots: [null, null, null],
       settings: { sound: true, vibration: true },
       plane: { model: 'auto', color: 'blanc', pattern: 'none', trail: 'white' },
+      currentMap: 'prairie',
+      maps: { prairie: { unlocked: true, best: 0, last: 0 } },
       updatedAt: 0,
     };
   }
@@ -32,6 +34,13 @@
     out.skills = Object.assign({}, obj.skills || {});
     out.settings = Object.assign(defaults().settings, obj.settings || {});
     out.plane = Object.assign(defaults().plane, obj.plane || {});
+    // Cartes : records par carte (reprise de l'ancien record unique pour la Prairie)
+    out.maps = {};
+    const src = obj.maps || {};
+    for (const id in src) out.maps[id] = Object.assign({ unlocked: false, best: 0, last: 0 }, src[id]);
+    if (!out.maps.prairie) out.maps.prairie = { unlocked: true, best: +obj.record || 0, last: +obj.lastDistance || 0 };
+    out.maps.prairie.unlocked = true;
+    if (!out.maps[out.currentMap] || !out.maps[out.currentMap].unlocked) out.currentMap = 'prairie';
     out.slots = Array.isArray(obj.slots) ? obj.slots.slice(0, 3) : [null, null, null];
     while (out.slots.length < 3) out.slots.push(null);
     for (const k of ['money', 'xp', 'record', 'totalDistance', 'runs', 'updatedAt', 'lastDistance']) {

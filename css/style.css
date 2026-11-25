@@ -240,6 +240,29 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .opt-note.ok { background: #e6f8ec; }
 textarea.code { width: 100%; height: 80px; font-family: monospace; font-size: 11px; border-radius: 10px; border: 2px solid #d5dce7; padding: 8px; resize: none; user-select: text; -webkit-user-select: text; touch-action: auto; }
 
+/* ============================ Cartes ============================ */
+.map-btn { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 10px; background: #fff; }
+.map-btn span { font-weight: 800; font-size: 16px; }
+.map-btn small { font-size: 11px; color: var(--muted); font-weight: 700; }
+.panel.wide { width: min(640px, 100%); }
+.maps-list { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.map-card { display: flex; gap: 12px; align-items: center; border-radius: 16px; padding: 10px 12px; border: 3px solid transparent; cursor: pointer; }
+.map-card.sel { border-color: var(--blue); }
+.map-card.locked { cursor: default; filter: grayscale(0.6); opacity: 0.75; }
+.map-icon { font-size: 38px; width: 50px; text-align: center; }
+.map-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.map-name { font-weight: 900; font-size: 17px; }
+.map-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 8px; }
+.tag.good { background: #fff1b8; color: #7a5600; }
+.tag.bad { background: #ffe0e0; color: #a32b2b; }
+.map-lock { font-size: 12px; color: #5a4a3a; display: flex; flex-direction: column; gap: 4px; }
+.theme-prairie { background: linear-gradient(135deg, #e3f6ff, #dff5d6); }
+.theme-desert { background: linear-gradient(135deg, #fff1d6, #f6dc9c); }
+.theme-mountains { background: linear-gradient(135deg, #e6f0ff, #f7faff); }
+.theme-ocean { background: linear-gradient(135deg, #d4f4ff, #fff2c9); }
+.theme-storm { background: linear-gradient(135deg, #dfe3ea, #c7ced9); }
+
 /* ============================ Onglet Avion ============================ */
 .plane-top { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
 #plane-preview { width: 52%; max-width: 300px; height: 110px; border-radius: 14px; flex-shrink: 0; box-shadow: inset 0 0 0 2px #e3e9f3; }
