@@ -261,7 +261,7 @@
         P.push({ type, x, y, r: type === 'lift' ? 1.4 : type === 'star' ? 1.5 : 1.3 });
       }
       // Les bonus se raréfient avec la distance
-      world.genX += (24 + r() * 26) * (1 + x / 900) / s.density;
+      world.genX += (17 + r() * 21) * (1 + x / 900) / s.density;
     }
     // Nettoyage
     if (world.pickups.length > 200) world.pickups = world.pickups.filter(pk => !pk.taken);

@@ -40,23 +40,31 @@
   }
 
   // ---------------------------------------------------------------- Caméra
+  // Caméra : assez proche pour bien voir l'avion, assez large pour anticiper les bonus.
+  // La hauteur de vue (en mètres) augmente un peu avec l'altitude et la vitesse, mais reste plafonnée.
+  const VIEW_MIN = 22, VIEW_MAX = 58;
   function updateCamera(p, stats, dt, instant) {
-    const k = instant ? 1 : Math.min(1, dt * 2.2);
+    const k = instant ? 1 : Math.min(1, dt * 1.5);
     const gh = ground(p.x);
     cam.gh = instant ? gh : lerp(cam.gh, gh, Math.min(1, dt * 3));
     const alt = Math.max(0, p.y - cam.gh);
-    const VH = clamp((alt + 7) / 0.6, 19, 240);
-    const targetPpm = H / VH;
-    cam.ppm = lerp(cam.ppm, targetPpm, k);
-    const anchorX = p.state === 'aim' ? 0.28 : 0.3;
-    cam.left = p.x - (W * anchorX) / cam.ppm;
+    const speed = p.state === 'flying' ? Math.hypot(p.vx, p.vy) : 0;
+    let VH;
+    if (p.state === 'aim') VH = clamp((alt + 8) / 0.62, VIEW_MIN, VIEW_MAX);
+    else VH = clamp(VIEW_MIN + Math.min(alt, 36) * 0.5 + clamp((speed - 14) * 0.45, 0, 18), VIEW_MIN, VIEW_MAX);
+    cam.ppm = lerp(cam.ppm, H / VH, k);
+    // Plus on va vite, plus l'avion est placé à gauche pour voir loin devant
+    const anchorTarget = p.state === 'aim' ? 0.28 : 0.3 - clamp((speed - 15) / 400, 0, 0.07);
+    cam.anchor = instant || cam.anchor == null ? anchorTarget : lerp(cam.anchor, anchorTarget, Math.min(1, dt * 1.5));
+    cam.left = p.x - (W * cam.anchor) / cam.ppm;
     const viewM = H / cam.ppm;
+    // Près du sol on montre le sol ; plus haut, l'avion reste un peu au-dessus du centre
     const bottomA = cam.gh - 0.1 * viewM;
-    const bottomB = p.y - 0.72 * viewM;
+    const bottomB = p.y - 0.6 * viewM;
     const target = Math.max(bottomA, bottomB);
-    cam.bottom = instant ? target : lerp(cam.bottom, target, Math.min(1, dt * 6));
+    cam.bottom = instant ? target : lerp(cam.bottom, target, Math.min(1, dt * 5));
     // L'avion ne doit jamais sortir de l'écran
-    cam.bottom = clamp(cam.bottom, p.y - 0.85 * viewM, p.y - 0.08 * viewM);
+    cam.bottom = clamp(cam.bottom, p.y - 0.82 * viewM, p.y - 0.12 * viewM);
   }
 
   // ---------------------------------------------------------------- Fond
