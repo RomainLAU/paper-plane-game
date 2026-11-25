@@ -39,6 +39,13 @@ Quand l'avion va plus vite que sa vitesse de croisière, il monte (45° maximum)
 ### Améliorations (argent)
 Lancer puissant, Tremplin (hauteur de départ), Ailes planeuses (garde la hauteur), Pliage aérodynamique (vitesse), Réservoir de boost, Turbine (puissance du boost), Aimant à bonus, Bonus renforcés, Prime au mètre.
 
+### Personnalisation de l'avion (onglet « Avion »)
+L'avion **évolue avec ton niveau** (mode Auto) : Classique → Planeur (niv. 3) → Flèche (5) → Faucon (8) → Delta (12) → Jet (16) → Phénix (20).
+On peut aussi choisir son modèle, sa couleur (12), son motif (rayures, pois, étoiles, flammes, damier) et sa traînée (bleue, feu, néon, dorée, arc-en-ciel), débloqués en montant de niveau. C'est purement esthétique.
+
+### Décor
+Prairie avec maisons, granges, moulins, plusieurs espèces d'arbres et ombres portées ; le ciel s'assombrit en montant jusqu'à une nuit étoilée avec la lune et des étoiles filantes.
+
 ### Compétences (XP)
 Chaque niveau donne 1 point de compétence. On commence **sans aucun slot** ; les 3 slots se débloquent aux niveaux **2, 6 et 12**.
 Chaque compétence a 3 niveaux.
@@ -67,6 +74,7 @@ Dans le dépôt GitHub : **Settings → Pages → Source : GitHub Actions**. Le 
 index.html             page + HUD + menus
 css/style.css          styles (paysage, zones sûres des encoches)
 js/data.js             améliorations, compétences, niveaux, calcul des stats
+js/planes.js           modèles d'avion, couleurs, motifs, traînées
 js/physics.js          physique du vol (portance/traînée/décrochage), terrain, bonus
 js/render.js           rendu Canvas (ciel, parallaxe, décor, avion, effets)
 js/ui.js               hangar, onglets, résultats, pause, HUD

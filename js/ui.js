@@ -42,6 +42,8 @@
     const canBuy = Data.SKILLS.some(s => li.level >= s.req && (d.skills[s.id] || 0) < Data.SKILL_MAX && points >= Data.skillCost((d.skills[s.id] || 0) + 1));
     const freeSlot = d.slots.slice(0, nSlots).some(x => !x) && Data.SKILLS.some(s => (d.skills[s.id] || 0) > 0 && !d.slots.includes(s.id));
     $('skills-dot').classList.toggle('hidden', !(canBuy || freeSlot));
+    const seen = d.plane.seenLevel || 1;
+    $('plane-dot').classList.toggle('hidden', !(li.level > seen && G.Planes.unlocksBetween(seen, li.level).length));
   }
 
   function renderUpgrades() {
@@ -143,17 +145,141 @@
     </div>`;
   }
 
+  // ---------------------------------------------------------------- Onglet Avion
+  let previewRaf = 0;
+  function renderPlane() {
+    const d = Save.data, P = G.Planes;
+    const level = Data.levelInfo(d.xp).level;
+    const look = P.resolve(d.plane, level);
+    d.plane.seenLevel = level;
+    Save.write(false);
+    const next = P.MODELS.find(m => m.level > level);
+    const lock = lv => `<span class="lock">🔒 Niv. ${lv}</span>`;
+    let html = `<div class="plane-top">
+      <canvas id="plane-preview"></canvas>
+      <div class="plane-info">
+        <div class="plane-name">${look.model.name}</div>
+        <div class="muted small">${look.auto ? '✨ Évolue automatiquement avec ton niveau' : 'Modèle choisi manuellement'}</div>
+        ${next ? `<div class="small next-evo">Prochaine évolution : <b>${next.name}</b> au niveau ${next.level}</div>` : '<div class="small next-evo">🏆 Tous les modèles sont débloqués !</div>'}
+      </div>
+    </div>`;
+    html += '<h4 class="sec">Modèle</h4><div class="chips">';
+    html += `<button class="chip ${look.auto ? 'sel' : ''}" data-look="model:auto"><canvas class="mini" data-m="${P.autoModel(level).id}"></canvas><span>Auto</span></button>`;
+    for (const m of P.MODELS) {
+      const ok = level >= m.level;
+      html += `<button class="chip ${ok ? '' : 'locked'} ${!look.auto && look.model.id === m.id ? 'sel' : ''}" ${ok ? `data-look="model:${m.id}"` : `data-locked="${m.level}"`}>
+        <canvas class="mini" data-m="${m.id}"></canvas><span>${ok ? m.name : lock(m.level)}</span></button>`;
+    }
+    html += '</div><h4 class="sec">Couleur</h4><div class="chips">';
+    for (const c of P.COLORS) {
+      const ok = level >= c.level;
+      const bg = c.main === 'rainbow' ? 'linear-gradient(135deg,#ff8a8a,#ffe680,#8affa8,#8ad8ff,#c08aff)' : `linear-gradient(135deg, ${c.main} 55%, ${c.shade} 55%)`;
+      html += `<button class="swatch ${ok ? '' : 'locked'} ${look.color.id === c.id ? 'sel' : ''}" style="background:${bg}" title="${c.name}" ${ok ? `data-look="color:${c.id}"` : `data-locked="${c.level}"`}>${ok ? '' : '🔒'}<small>${ok ? c.name : 'Niv. ' + c.level}</small></button>`;
+    }
+    html += '</div><h4 class="sec">Motif</h4><div class="chips">';
+    for (const pt of P.PATTERNS) {
+      const ok = level >= pt.level;
+      html += `<button class="chip ${ok ? '' : 'locked'} ${look.pattern.id === pt.id ? 'sel' : ''}" ${ok ? `data-look="pattern:${pt.id}"` : `data-locked="${pt.level}"`}>
+        <canvas class="mini" data-p="${pt.id}"></canvas><span>${ok ? pt.name : lock(pt.level)}</span></button>`;
+    }
+    html += '</div><h4 class="sec">Traînée</h4><div class="chips">';
+    for (const t of P.TRAILS) {
+      const ok = level >= t.level;
+      const bg = t.id === 'rainbow' ? 'linear-gradient(90deg,#ff5d5d,#ffd23f,#5be37a,#3dd6f0,#8a5cff)' : `linear-gradient(90deg, ${t.preview[0]}, ${t.preview[1]})`;
+      html += `<button class="chip trail ${ok ? '' : 'locked'} ${look.trail.id === t.id ? 'sel' : ''}" ${ok ? `data-look="trail:${t.id}"` : `data-locked="${t.level}"`}>
+        <i style="background:${bg}"></i><span>${ok ? t.name : lock(t.level)}</span></button>`;
+    }
+    html += '</div><p class="muted small">Les apparences sont purement esthétiques. De nouveaux modèles, couleurs, motifs et traînées se débloquent en montant de niveau.</p>';
+    $('tab-plane').innerHTML = html;
+
+    // Miniatures
+    const dpr = Math.min(G.devicePixelRatio || 1, 2);
+    $('tab-plane').querySelectorAll('canvas.mini').forEach(cv => {
+      const w = cv.clientWidth || 70, h = cv.clientHeight || 40;
+      cv.width = w * dpr; cv.height = h * dpr;
+      const c = cv.getContext('2d');
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const l = Object.assign({}, look);
+      if (cv.dataset.m) l.model = P.MODELS.find(m => m.id === cv.dataset.m);
+      if (cv.dataset.p) l.pattern = P.PATTERNS.find(x => x.id === cv.dataset.p);
+      c.translate(w / 2 + 2, h / 2 + 5);
+      c.rotate(-0.12);
+      P.draw(c, Math.min(w * 0.8, h * 1.4), l, 0.5);
+    });
+    startPreview(look);
+  }
+
+  function startPreview(look) {
+    cancelAnimationFrame(previewRaf);
+    const cv = $('plane-preview');
+    if (!cv) return;
+    const dpr = Math.min(G.devicePixelRatio || 1, 2);
+    const w = cv.clientWidth || 220, h = cv.clientHeight || 110;
+    cv.width = w * dpr; cv.height = h * dpr;
+    const c = cv.getContext('2d');
+    const t0 = performance.now();
+    const frame = now => {
+      if (!document.body.contains(cv) || currentTab !== 'plane' || $('menu').classList.contains('hidden')) return;
+      const t = (now - t0) / 1000;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const g = c.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, '#5fb8ff'); g.addColorStop(1, '#d6f1ff');
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      // nuages qui défilent
+      c.fillStyle = 'rgba(255,255,255,0.85)';
+      for (let i = 0; i < 4; i++) {
+        const x = ((i * 97 - t * 40) % (w + 80) + w + 80) % (w + 80) - 40, y = 18 + (i % 2) * 50;
+        c.beginPath(); c.arc(x, y, 12, 0, 7); c.arc(x + 14, y + 3, 9, 0, 7); c.arc(x - 13, y + 4, 8, 0, 7); c.fill();
+      }
+      // traînée
+      const px = w * 0.55, py = h * 0.5 + Math.sin(t * 2) * 8, L = Math.min(w * 0.45, 120);
+      const n = 26;
+      c.lineCap = 'round';
+      for (let i = 1; i < n; i++) {
+        const k0 = i - 1, k1 = i;
+        const x0 = px - L * 0.45 - (n - k0) * 6, y0 = h * 0.5 + Math.sin((t - (n - k0) * 0.035) * 2) * 8 + 2;
+        const x1 = px - L * 0.45 - (n - k1) * 6, y1 = h * 0.5 + Math.sin((t - (n - k1) * 0.035) * 2) * 8 + 2;
+        c.strokeStyle = G.Planes.trailColor(look.trail, n - i, n, (i / n) * 0.85, t);
+        c.lineWidth = 1 + (i / n) * 4;
+        c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+      }
+      c.save();
+      c.translate(px, py);
+      c.rotate(-Math.cos(t * 2) * 0.12);
+      G.Planes.draw(c, L, look, t);
+      c.restore();
+      previewRaf = requestAnimationFrame(frame);
+    };
+    previewRaf = requestAnimationFrame(frame);
+  }
+
+  function onLook(e) {
+    let b = e.target.closest('[data-look]');
+    if (b) {
+      const [kind, id] = b.dataset.look.split(':');
+      Save.data.plane[kind] = id;
+      Save.write();
+      H.refreshLook();
+      Sfx.click();
+      renderPlane();
+      return;
+    }
+    b = e.target.closest('[data-locked]');
+    if (b) { Sfx.error(); toast(`🔒 Se débloque au niveau ${b.dataset.locked}`); }
+  }
+
   function renderMenu() {
     renderProfile();
     if (currentTab === 'upgrades') renderUpgrades();
     else if (currentTab === 'skills') renderSkills();
+    else if (currentTab === 'plane') renderPlane();
     else renderOptions();
   }
 
   function setTab(tab) {
     currentTab = tab;
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    for (const t of ['upgrades', 'skills', 'options']) $('tab-' + t).classList.toggle('hidden', t !== tab);
+    for (const t of ['upgrades', 'skills', 'plane', 'options']) $('tab-' + t).classList.toggle('hidden', t !== tab);
     renderMenu();
   }
 
@@ -258,6 +384,7 @@
       const newSkills = Data.SKILLS.filter(s => s.req > r.level - r.levelsGained && s.req <= r.level);
       if (newSkills.length) lv += `<br>Nouvelle${newSkills.length > 1 ? 's' : ''} compétence${newSkills.length > 1 ? 's' : ''} : ${newSkills.map(s => s.icon + ' ' + s.name).join(', ')}`;
     }
+    if (r.cosmetics && r.cosmetics.length) lv += `<br>🎨 Débloqué : ${r.cosmetics.join(', ')}`;
     $('res-level').innerHTML = lv;
     $('results').classList.remove('hidden');
   }
@@ -355,6 +482,7 @@
       else if ((b = e.target.closest('[data-unequip]'))) unequip(+b.dataset.unequip);
       else if ((b = e.target.closest('[data-unequip-id]'))) unequip(Save.data.slots.indexOf(b.dataset.unequipId));
     });
+    $('tab-plane').addEventListener('click', onLook);
     $('tab-options').addEventListener('click', e => {
       const b = e.target.closest('[data-opt]');
       if (b) onOption(b.dataset.opt);

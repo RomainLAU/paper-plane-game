@@ -25,6 +25,7 @@
   // ---------------------------------------------------------------- Mise en place d'un vol
   function setupScene() {
     S.stats = Data.computeStats(Save.data);
+    refreshLook();
     S.plane = Physics.newPlane(S.stats);
     S.world = Physics.newWorld(S.stats);
     S.trail = []; S.particles = []; S.floaters = [];
@@ -36,6 +37,10 @@
     S.glidePointers.clear();
     S.boostHeld = false;
     Renderer.updateCamera(S.plane, S.stats, 0, true);
+  }
+
+  function refreshLook() {
+    S.look = G.Planes.resolve(Save.data.plane, Data.levelInfo(Save.data.xp).level);
   }
 
   function play() {
@@ -86,6 +91,7 @@
       dist, money, xp, newRecord, pickups: p.pickups,
       level: after, levelsGained: after - before,
       newSlots: Data.unlockedSlots(after) - Data.unlockedSlots(before),
+      cosmetics: G.Planes.unlocksBetween(before, after),
     };
   }
 
@@ -334,7 +340,7 @@
 
     if (p) {
       Renderer.draw({
-        plane: p, stats: S.stats, world: S.world, trail: S.trail, particles: S.particles, floaters: S.floaters,
+        plane: p, stats: S.stats, world: S.world, trail: S.trail, particles: S.particles, floaters: S.floaters, look: S.look,
         aim: S.mode === 'play' && p.state === 'aim' ? S.aim : null,
         time: S.time, record: S.record, lastDistance: S.lastDistance, paused: S.paused || S.mode !== 'play',
         get drawAngle() { return S.drawAngle; }, set drawAngle(v) { S.drawAngle = v; },
@@ -349,7 +355,7 @@
     Renderer.init(canvas);
     await Save.init();
     UI.init({
-      play, pause, resume, restart, quit, toHangar, useSkill, toggleFullscreen,
+      play, pause, resume, restart, quit, toHangar, useSkill, toggleFullscreen, refreshLook,
       setBoost: v => { S.boostHeld = v; },
     });
     setupScene();

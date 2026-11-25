@@ -19,6 +19,7 @@
       skills: {},
       slots: [null, null, null],
       settings: { sound: true, vibration: true },
+      plane: { model: 'auto', color: 'blanc', pattern: 'none', trail: 'white' },
       updatedAt: 0,
     };
   }
@@ -30,6 +31,7 @@
     out.upgrades = Object.assign({}, obj.upgrades || {});
     out.skills = Object.assign({}, obj.skills || {});
     out.settings = Object.assign(defaults().settings, obj.settings || {});
+    out.plane = Object.assign(defaults().plane, obj.plane || {});
     out.slots = Array.isArray(obj.slots) ? obj.slots.slice(0, 3) : [null, null, null];
     while (out.slots.length < 3) out.slots.push(null);
     for (const k of ['money', 'xp', 'record', 'totalDistance', 'runs', 'updatedAt', 'lastDistance']) {
