@@ -59,7 +59,7 @@ python3 -m http.server 8000
 ```
 
 ## Mise en ligne (GitHub Pages)
-Le workflow `.github/workflows/pages.yml` publie le jeu à chaque push sur `main`.
+Le workflow `.github/workflows/pages.yml` publie le jeu à chaque push sur la branche par défaut (`claude/gallant-hawking-e1xbx5`, ou `main` si elle est créée).
 Dans le dépôt GitHub : **Settings → Pages → Source : GitHub Actions**. Le jeu sera ensuite accessible sur `https://<utilisateur>.github.io/paper-plane-game/`, à ouvrir sur le téléphone puis à ajouter à l'écran d'accueil.
 
 ## Structure

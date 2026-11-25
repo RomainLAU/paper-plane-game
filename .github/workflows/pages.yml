@@ -1,8 +1,9 @@
 name: Déploiement GitHub Pages
 
+# Publie le jeu à chaque push sur la branche par défaut (ou sur main si elle est créée plus tard)
 on:
   push:
-    branches: [main]
+    branches: [main, claude/gallant-hawking-e1xbx5]
   workflow_dispatch:
 
 permissions:
