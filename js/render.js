@@ -553,7 +553,7 @@
     drawParticles(st.particles);
     let angle;
     if (p.state === 'aim') angle = st.aim && st.aim.active ? st.aim.angle : 0.2;
-    else if (p.state === 'flying') angle = Math.atan2(p.vy, p.vx) + (p.gliding ? 0.15 : 0);
+    else if (p.state === 'flying') angle = Math.atan2(p.vy + (p.liftRate || 0) * 0.5, p.vx) + (p.gliding ? 0.15 : 0);
     else angle = Math.atan2(ground(p.x + 0.5) - ground(p.x - 0.5), 1);
     st.drawAngle = st.drawAngle == null ? angle : lerp(st.drawAngle, angle, Math.min(1, dt * 12));
     drawPlane(p, st.drawAngle, st.time);

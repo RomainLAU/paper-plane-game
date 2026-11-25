@@ -1,6 +1,6 @@
 /* Service worker : le jeu fonctionne hors-ligne une fois chargé.
    Stratégie "stale-while-revalidate" : réponse immédiate depuis le cache, mise à jour en arrière-plan. */
-const CACHE = 'aeropapier-v1';
+const CACHE = 'aeropapier-v2';
 const ASSETS = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
   'js/data.js', 'js/physics.js', 'js/save.js', 'js/audio.js', 'js/render.js', 'js/ui.js', 'js/main.js',

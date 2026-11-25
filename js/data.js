@@ -39,12 +39,12 @@
       desc: l => `Rebondit ${l} fois sur le sol (${[0, 60, 70, 80][l]}% de la vitesse conservée)` },
     { id: 'relaunch', type: 'active', icon: '🔁', name: 'Second lancer', req: 2,
       uses: l => [0, 1, 1, 2][l],
-      desc: l => `Relance l'avion vers le haut à ${[0, 70, 100, 100][l]}% de ta vitesse de lancer, même au sol (${[0, 1, 1, 2][l]}× par vol)` },
+      desc: l => `Relance l'avion avec un grand regain de vitesse, même au sol (puissance ${['', '★', '★★', '★★★'][l]}, ${[0, 1, 1, 2][l]}× par vol)` },
     { id: 'feather', type: 'passive', icon: '🪶', name: 'Plume', req: 3,
       desc: l => `Gravité réduite de ${[0, 8, 14, 20][l]}%` },
     { id: 'updraft', type: 'active', icon: '🌪️', name: 'Ascension', req: 4,
       uses: l => [0, 1, 2, 3][l],
-      desc: l => `Un courant d'air te propulse vers le haut (${[0, 1, 2, 3][l]}× par vol)` },
+      desc: l => `Un courant d'air te fait monter d'environ 22 m sans perdre de vitesse (${[0, 1, 2, 3][l]}× par vol)` },
     { id: 'scholar', type: 'passive', icon: '📚', name: 'Érudit', req: 4,
       desc: l => `+${[0, 20, 40, 60][l]}% d'XP gagnée` },
     { id: 'supermagnet', type: 'passive', icon: '🌀', name: 'Super aimant', req: 5,
@@ -100,6 +100,7 @@
 
     const s = {
       cl, cd,
+      vCruise: Math.sqrt(GRAVITY / cl),
       vStall: 0.55 * Math.sqrt(GRAVITY / cl),
       liftMax: 2.3 * GRAVITY,
       gravity: 1 - [0, 0.08, 0.14, 0.2][sk('feather')],
@@ -114,7 +115,6 @@
       bounceKeep: [0, 0.6, 0.7, 0.8][sk('bounce')],
       regen: [0, 0.1, 0.2, 0.3][sk('regen')],
       density: 1 + [0, 0.3, 0.6, 1][sk('luck')],
-      liftAccel: 24 * bonus,
       // Altitude max à laquelle on fait apparaître des bonus : dépend de l'énergie de lancer
       spawnAlt: Math.max(16, Math.min(140, launchHeight + (launchSpeed * launchSpeed) / (2 * GRAVITY) * 0.6)),
       actives: [],

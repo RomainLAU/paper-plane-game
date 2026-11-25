@@ -5,6 +5,7 @@
   const MAX_CLIMB = 1.25;   // angle max de montée (rad)
   const MAX_DIVE = -1.45;   // angle max de piqué (rad)
   const MAX_SPEED = 120;
+  const PITCH_DAMP = 10;    // amortissement de l'oscillation montée/piqué
 
   // ---------------------------------------------------------------- Terrain
   function ground(x) {
@@ -22,7 +23,7 @@
       x: 0, y: stats.launchHeight + 0.6, vx: 0, vy: 0,
       fuel: stats.tank,
       boosting: false, gliding: false,
-      liftT: 0, nitroT: 0, glideT: 0,
+      liftT: 0, liftDur: 1, liftRate0: 0, liftRate: 0, nitroT: 0, glideT: 0,
       bouncesLeft: stats.bounces,
       maxX: 0, time: 0,
       coins: 0, pickups: 0,
@@ -42,6 +43,19 @@
     p.vy = Math.sin(angle) * speed;
   }
 
+  // Courant ascendant : c'est la masse d'air qui monte, l'avion garde sa vitesse et son assiette
+  // (au lieu d'être poussé à la verticale, ce qui lui faisait perdre toute sa vitesse puis piquer).
+  function startLift(p, s, height, dur) {
+    p.liftT = dur;
+    p.liftDur = dur;
+    p.liftRate0 = (2 * height) / dur; // vitesse de montée décroissante, intégrale = height
+    const sp = Math.max(Math.hypot(p.vx, p.vy), s.vCruise * 1.2);
+    let ang = Math.atan2(p.vy, p.vx);
+    if (ang < 0) ang *= 0.3;          // sort l'avion de son piqué sans perte de vitesse
+    ang = Math.min(ang, 0.12);        // vol presque à plat : c'est l'air qui monte
+    setVelocity(p, sp, ang);
+  }
+
   // Utilise une compétence active. Renvoie true si elle a été utilisée.
   function useSkill(p, stats, id) {
     const a = stats.actives.find(x => x.id === id);
@@ -49,13 +63,13 @@
     if (p.state !== 'flying' && !(p.state === 'sliding' && id === 'relaunch')) return false;
     p.uses[id]--;
     if (id === 'relaunch') {
-      const k = [0, 0.7, 1, 1][a.lvl];
+      // Toujours assez de vitesse pour voler : jamais sous ~1,6× la vitesse de croisière
       if (p.state === 'sliding') { p.state = 'flying'; p.y = ground(p.x) + 0.3; }
       const cur = Math.hypot(p.vx, p.vy);
-      setVelocity(p, Math.max(cur, stats.launchSpeed * k), 0.45);
+      const speed = Math.max(cur + 5, stats.launchSpeed * [0, 0.8, 1, 1.1][a.lvl], stats.vCruise * [0, 1.6, 1.8, 2][a.lvl]);
+      setVelocity(p, speed, 0.18);
     } else if (id === 'updraft') {
-      p.liftT = Math.max(p.liftT, 1.3);
-      if (p.vy < 0) p.vy *= 0.3;
+      startLift(p, stats, 22 * stats.bonus, 1.4);
     } else if (id === 'nitro') {
       p.nitroT = [0, 2, 3, 3][a.lvl];
     } else if (id === 'glider') {
@@ -78,7 +92,16 @@
 
       let L = cl * speed * speed;
       if (speed < s.vStall) L *= (speed / s.vStall) * (speed / s.vStall); // décrochage
-      L = Math.min(L, s.liftMax);
+      // Amortissement : l'excès de portance (trop de vitesse) fait monter en pente douce
+      // au lieu de cabrer brutalement puis piquer. Au-delà de ~35° de montée, il ramène le nez.
+      const gamma = Math.atan2(p.vy, p.vx);
+      const trim = GRAV * s.gravity * Math.cos(gamma);
+      let excess = L - trim;
+      if (excess > 0) excess = Math.min(excess, 0.5 * GRAV) * Math.max(-1, Math.min(1, 1 - gamma / 0.6));
+      else excess = Math.max(excess, -0.35 * GRAV); // nez qui redescend progressivement quand l'avion est lent
+      // Stabilité : ramène doucement l'avion vers sa pente de plané (évite les montagnes russes)
+      excess -= PITCH_DAMP * (gamma + Math.atan(cd / cl)); // cl/cd courants : planer aplatit la pente visée
+      L = Math.min(trim + excess, s.liftMax);
       let D = cd * speed * speed + 0.25;
       let grav = GRAV * s.gravity;
 
@@ -102,7 +125,6 @@
       thrust *= Math.min(1, 16 / speed);
       ax += dx * thrust; ay += dy * thrust;
 
-      if (p.liftT > 0) { p.liftT -= dt; ay += s.liftAccel; }
 
       p.vx += ax * dt;
       p.vy += ay * dt;
@@ -119,6 +141,12 @@
 
       p.x += p.vx * dt;
       p.y += p.vy * dt;
+      p.liftRate = 0;
+      if (p.liftT > 0) {
+        p.liftRate = p.liftRate0 * (p.liftT / p.liftDur);
+        p.y += p.liftRate * dt;
+        p.liftT -= dt;
+      }
 
       const gh = ground(p.x);
       if (p.y <= gh) {
@@ -224,8 +252,7 @@
       const ang = Math.atan2(p.vy, p.vx);
       setVelocity(p, sp + 9 * s.bonus, Math.max(ang, -0.2));
     } else if (type === 'lift') {
-      p.liftT = Math.max(p.liftT, 0.8);
-      if (p.vy < 0) p.vy *= 0.4;
+      startLift(p, s, 11 * s.bonus, 0.9);
     } else if (type === 'coin') {
       p.coins++;
     }
