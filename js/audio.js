@@ -82,6 +82,8 @@
     },
     splash(small) { noise(small ? 0.3 : 0.7, small ? 0.25 : 0.45, 900, 0.6, 250); if (!small) tone(300, 0.4, 'sine', 0.2, 80); },
     zap() { noise(0.3, 0.35, 3000, 0.5, 600); tone(1200, 0.15, 'square', 0.08, 200); },
+    crunch(big) { noise(big ? 0.45 : 0.22, big ? 0.5 : 0.3, 2400, 0.4, 700); noise(big ? 0.3 : 0.15, 0.25, 900, 0.8, 400); },
+    burn() { noise(0.8, 0.35, 1800, 0.3, 4000); tone(160, 0.5, 'sawtooth', 0.08, 60); },
     bonk() { tone(260, 0.15, 'square', 0.12, 120); },
     bounce() { tone(180, 0.18, 'sine', 0.4, 90); },
     land() { noise(0.35, 0.3, 300, 0.7, 120); },

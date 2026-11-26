@@ -36,6 +36,7 @@
     $('m-xp-bar').style.width = `${(li.current / li.needed) * 100}%`;
     $('m-money').textContent = `${fmt(d.money)} $`;
     $('m-points').textContent = points;
+    $('m-diamonds').textContent = `${fmt(d.diamonds || 0)} 💎`;
     const map = G.Maps.byId(d.currentMap);
     $('m-record').textContent = `${fmt((d.maps[map.id] || {}).best || 0)} m`;
     $('m-map').textContent = `${map.icon} ${map.name}`;
@@ -88,7 +89,7 @@
     const nSlots = Data.unlockedSlots(li.level);
     let html = `<p class="intro">Chaque niveau gagné te donne un point. Dépense tes points pour débloquer ou améliorer une compétence, puis range-la dans un emplacement pour l'emporter en vol. Il te reste <b>${points} point${points > 1 ? 's' : ''}</b>.</p>`;
     html += '<div class="slots" aria-label="Emplacements de compétences">';
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < Data.SLOT_LEVELS.length; i++) {
       if (i >= nSlots) {
         html += `<div class="slot locked">au niveau ${Data.SLOT_LEVELS[i]}</div>`;
       } else if (d.slots[i]) {
@@ -172,49 +173,70 @@
 
   // ---------------------------------------------------------------- Onglet Avion
   let previewRaf = 0;
+  let buyArmed = null, buyArmedAt = 0;
   function renderPlane() {
     const d = Save.data, P = G.Planes;
     const level = Data.levelInfo(d.xp).level;
     const look = P.resolve(d.plane, level);
     d.plane.seenLevel = level;
     Save.write(false);
-    const next = P.MODELS.find(m => m.level > level);
+    const next = P.MODELS.find(m => m.level && m.level > level);
     const lock = lv => `<span class="lock">au niveau ${lv}</span>`;
+    const owned = d.plane.owned || [];
+    // un élément : disponible (niveau atteint ou acheté), à acheter en diamants, ou verrouillé par le niveau
+    const state = x => P.available(x, level, owned) ? 'ok' : x.diamonds ? 'shop' : 'locked';
+    const attrs = (kind, x) => {
+      const st = state(x);
+      if (st === 'ok') return `data-look="${kind}:${x.id}"`;
+      if (st === 'shop') return `data-buy-look="${kind}:${x.id}"`;
+      return `data-locked="${x.level}"`;
+    };
+    const label = (x, name) => {
+      const st = state(x);
+      if (st === 'ok') return name;
+      if (st === 'shop') return `<span class="gem">${x.diamonds} 💎</span>`;
+      return lock(x.level);
+    };
     let html = `<div class="plane-top">
       <canvas id="plane-preview"></canvas>
       <div class="plane-info">
         <div class="plane-name">${look.model.name}</div>
         <p>${look.auto ? "Ton avion change de modèle tout seul quand tu montes de niveau." : 'Tu as choisi ce modèle toi-même.'}</p>
-        <p class="next">${next ? `Prochain modèle : ${next.name}, au niveau ${next.level}` : 'Tous les modèles sont débloqués'}</p>
+        <p class="next">${next ? `Prochain modèle : ${next.name}, au niveau ${next.level}` : 'Tu as tous les modèles gagnés par niveau. Les autres s\'achètent en diamants.'}</p>
       </div>
     </div>`;
     html += '<h3 class="group-title">Modèle</h3><div class="chips">';
     html += `<button class="chip ${look.auto ? 'sel' : ''}" data-look="model:auto"><canvas class="mini" data-m="${P.autoModel(level).id}"></canvas><span>Auto</span></button>`;
     for (const m of P.MODELS) {
-      const ok = level >= m.level;
-      html += `<button class="chip ${ok ? '' : 'locked'} ${!look.auto && look.model.id === m.id ? 'sel' : ''}" ${ok ? `data-look="model:${m.id}"` : `data-locked="${m.level}"`}>
-        <canvas class="mini" data-m="${m.id}"></canvas><span>${ok ? m.name : lock(m.level)}</span></button>`;
+      html += `<button class="chip ${state(m)} ${!look.auto && look.model.id === m.id ? 'sel' : ''}" ${attrs('model', m)} title="${m.name}">
+        <canvas class="mini" data-m="${m.id}"></canvas><span>${label(m, m.name)}</span></button>`;
     }
     html += '</div><h3 class="group-title">Couleur du papier</h3><div class="swatches">';
+    const SPECIAL_BG = {
+      rainbow: 'linear-gradient(135deg,#ff8a8a,#ffe680,#8affa8,#8ad8ff,#c08aff)',
+      holo: 'linear-gradient(135deg,#ffd6f0,#d6f0ff,#e6ffd6,#fff3c4)',
+      galaxy: 'radial-gradient(circle at 30% 30%, #ffffff 0 1px, transparent 2px), radial-gradient(circle at 70% 60%, #ffffff 0 1px, transparent 2px), linear-gradient(135deg,#1b1046,#4a2a9a,#1f5fb8)',
+    };
     for (const c of P.COLORS) {
-      const ok = level >= c.level;
-      const bg = c.main === 'rainbow' ? 'linear-gradient(135deg,#ff8a8a,#ffe680,#8affa8,#8ad8ff,#c08aff)' : `linear-gradient(135deg, ${c.main} 55%, ${c.shade} 55%)`;
-      html += `<button class="swatch ${ok ? '' : 'locked'} ${look.color.id === c.id ? 'sel' : ''}" ${ok ? `data-look="color:${c.id}"` : `data-locked="${c.level}"`} aria-label="${c.name}${ok ? '' : ', au niveau ' + c.level}"><span class="paper" style="background:${bg}"></span><small>${ok ? c.name : 'niveau ' + c.level}</small></button>`;
+      const st = state(c);
+      const bg = SPECIAL_BG[c.main] || `linear-gradient(135deg, ${c.main} 55%, ${c.shade} 55%)`;
+      const small = st === 'ok' ? c.name : st === 'shop' ? `<span class="gem">${c.diamonds} 💎</span>` : 'niveau ' + c.level;
+      html += `<button class="swatch ${st} ${look.color.id === c.id ? 'sel' : ''}" ${attrs('color', c)} aria-label="${c.name}" title="${c.name}"><span class="paper" style="background:${bg}"></span><small>${small}</small></button>`;
     }
     html += '</div><h3 class="group-title">Motif</h3><div class="chips">';
     for (const pt of P.PATTERNS) {
-      const ok = level >= pt.level;
-      html += `<button class="chip ${ok ? '' : 'locked'} ${look.pattern.id === pt.id ? 'sel' : ''}" ${ok ? `data-look="pattern:${pt.id}"` : `data-locked="${pt.level}"`}>
-        <canvas class="mini" data-p="${pt.id}"></canvas><span>${ok ? pt.name : lock(pt.level)}</span></button>`;
+      html += `<button class="chip ${state(pt)} ${look.pattern.id === pt.id ? 'sel' : ''}" ${attrs('pattern', pt)} title="${pt.name}">
+        <canvas class="mini" data-p="${pt.id}"></canvas><span>${label(pt, pt.name)}</span></button>`;
     }
     html += '</div><h3 class="group-title">Traînée</h3><div class="chips">';
     for (const t of P.TRAILS) {
-      const ok = level >= t.level;
-      const bg = t.id === 'rainbow' ? 'linear-gradient(90deg,#ff5d5d,#ffd23f,#5be37a,#3dd6f0,#8a5cff)' : `linear-gradient(90deg, ${t.preview[0]}, ${t.preview[1]})`;
-      html += `<button class="chip trail ${ok ? '' : 'locked'} ${look.trail.id === t.id ? 'sel' : ''}" ${ok ? `data-look="trail:${t.id}"` : `data-locked="${t.level}"`}>
-        <i style="background:${bg}"></i><span>${ok ? t.name : lock(t.level)}</span></button>`;
+      const bg = t.id === 'rainbow' ? 'linear-gradient(90deg,#ff5d5d,#ffd23f,#5be37a,#3dd6f0,#8a5cff)'
+        : t.dots ? `radial-gradient(circle, ${t.preview[0]} 0 2px, transparent 3px) 0 0 / 8px 10px, ${t.preview[1]}22`
+        : `linear-gradient(90deg, ${t.preview[0]}, ${t.preview[1]})`;
+      html += `<button class="chip trail ${state(t)} ${look.trail.id === t.id ? 'sel' : ''}" ${attrs('trail', t)} title="${t.name}">
+        <i style="background:${bg}"></i><span>${label(t, t.name)}</span></button>`;
     }
-    html += '</div><p class="paper-note">L\'apparence ne change pas les performances. Monte de niveau pour débloquer de nouveaux modèles, couleurs, motifs et traînées.</p>';
+    html += `</div><p class="paper-note">L'apparence ne change pas les performances. Monte de niveau pour débloquer de nouveaux modèles, couleurs, motifs et traînées. Les pièces marquées 💎 s'achètent uniquement avec des diamants : tu en as <b>${fmt(d.diamonds || 0)}</b>. Les diamants se trouvent rarement dans le ciel, et tu en gagnes en ouvrant une carte ou tous les 500 m de record.</p>`;
     $('tab-plane').innerHTML = html;
 
     // Miniatures
@@ -226,6 +248,7 @@
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
       const l = Object.assign({}, look);
       if (cv.dataset.m) l.model = P.MODELS.find(m => m.id === cv.dataset.m);
+      if (cv.dataset.m && cv.dataset.m !== look.model.id && !P.available(l.model, level, owned)) l.color = P.COLORS[0];
       if (cv.dataset.p) l.pattern = P.PATTERNS.find(x => x.id === cv.dataset.p);
       c.translate(w / 2 + 2, h / 2 + 5);
       c.rotate(-0.12);
@@ -289,6 +312,29 @@
       renderPlane();
       return;
     }
+    b = e.target.closest('[data-buy-look]');
+    if (b) {
+      const [kind, id] = b.dataset.buyLook.split(':');
+      const list = { model: G.Planes.MODELS, color: G.Planes.COLORS, pattern: G.Planes.PATTERNS, trail: G.Planes.TRAILS }[kind];
+      const item = list.find(x => x.id === id);
+      const d = Save.data;
+      if ((d.diamonds || 0) < item.diamonds) { Sfx.error(); toast(`Il te manque ${item.diamonds - (d.diamonds || 0)} 💎 pour ${item.name}`); return; }
+      if (buyArmed !== b.dataset.buyLook || Date.now() - buyArmedAt > 3000) {
+        buyArmed = b.dataset.buyLook; buyArmedAt = Date.now();
+        Sfx.click(); toast(`Touche encore pour acheter ${item.name} pour ${item.diamonds} 💎`);
+        return;
+      }
+      buyArmed = null;
+      d.diamonds -= item.diamonds;
+      d.plane.owned = (d.plane.owned || []).concat(id);
+      d.plane[kind] = id;
+      Save.write();
+      H.refreshLook();
+      Sfx.buy(); vibrate(20);
+      toast(`${item.name} acheté et équipé`);
+      renderMenu();
+      return;
+    }
     b = e.target.closest('[data-locked]');
     if (b) { Sfx.error(); toast(`Disponible au niveau ${b.dataset.locked}`); }
   }
@@ -318,7 +364,8 @@
           <span class="map-name">${m.name}${sel ? '<small>carte actuelle</small>' : ''}</span>
           <span class="map-desc" style="display:block">${m.desc}</span>
           <span class="map-gain" style="display:block">Gains ×${gain}</span>
-          ${m.malus.length ? `<span class="map-malus" style="display:block">${m.malus.join(', ')}</span>` : ''}
+          ${m.perks ? `<span class="map-gain" style="display:block">Aide : ${m.perks.join(', ').toLowerCase()}</span>` : ''}
+          ${m.malus.length ? `<span class="map-malus" style="display:block">${m.malus.map((x, k) => k ? x[0].toLowerCase() + x.slice(1) : x).join(', ')}</span>` : ''}
           ${status}
         </span>
       </${tag}></li>`;
@@ -429,12 +476,15 @@
   function hideResults() { $('results').classList.add('hidden'); }
 
   function showResults(r) {
-    $('res-title').textContent = r.dist >= 1000 ? 'Vol incroyable' : r.dist >= 200 ? 'Beau vol' : 'Atterrissage';
+    $('res-title').textContent = r.burnt ? 'Avion brûlé' : r.crashed ? 'Avion écrasé' : r.dist >= 1000 ? 'Vol incroyable' : r.dist >= 200 ? 'Beau vol' : 'Atterrissage';
     $('res-dist').textContent = `${fmt(r.dist)} m`;
     $('res-record').classList.toggle('hidden', !r.newRecord);
     $('res-money').textContent = `+${fmt(r.money)} $`;
     $('res-xp').textContent = `+${fmt(r.xp)} XP`;
     $('res-pickups').textContent = r.pickups;
+    $('res-diamonds').textContent = `+${r.diamonds || 0} 💎`;
+    $('res-diamonds').classList.toggle('hidden', !r.diamonds);
+    $('res-dia-label').classList.toggle('hidden', !r.diamonds);
     const notes = [];
     if (r.levelsGained > 0) {
       notes.push(`Niveau ${r.level}, +${r.levelsGained} point${r.levelsGained > 1 ? 's' : ''}`);
@@ -492,7 +542,7 @@
     const beat = dist > record && record > 0;
     setText('hud-record', beat ? 'Nouveau record' : `Record ${fmt(record)} m`);
     if (hudCache.beat !== beat) { hudCache.beat = beat; $('hud-record').classList.toggle('beat', beat); }
-    setText('hud-money', `+${fmt(liveMoney)} $`);
+    setText('hud-money', p.diamonds ? `+${fmt(liveMoney)} $   +${p.diamonds} 💎` : `+${fmt(liveMoney)} $`);
     const frac = stats.tank > 0 ? p.fuel / stats.tank : 0;
     const off = (276.5 * (1 - frac)).toFixed(1);
     if (hudCache.off !== off) { hudCache.off = off; $('boost-ring-fg').style.strokeDashoffset = off; }

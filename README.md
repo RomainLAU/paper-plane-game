@@ -45,13 +45,23 @@ Lancer puissant, Tremplin (hauteur de départ), Ailes planeuses (garde la hauteu
 ### Cartes
 Chaque carte est plus dure mais rapporte plus. Atteindre une certaine distance débloque la suivante :
 
-| Carte | Débloquée par | Gains | Difficultés |
-|---|---|---|---|
-| 🌾 Prairie | — | ×1 | — |
-| 🏜️ Désert | 600 m en Prairie | ×1,6 | gravité +10 %, vent de face, tempêtes de sable |
-| 🏔️ Montagnes | 700 m dans le Désert | ×2,3 | gravité +20 %, pics à survoler, rafales descendantes |
-| 🏝️ Archipel | 750 m en Montagnes | ×3 | gravité +25 %, l'eau arrête le vol (sauf rebond), mouettes |
-| ⛈️ Orage | 800 m dans l'Archipel | ×4 | gravité +35 %, pluie (frottements +30 %), nuages électriques |
+| Carte | Débloquée par | Gains | Difficultés | Aides |
+|---|---|---|---|---|
+| 🌾 Prairie | — | ×1 | — | — |
+| 🏜️ Désert | 600 m en Prairie | ×1,6 | gravité +10 %, vent de face, tempêtes de sable | — |
+| 🏔️ Montagnes | 700 m dans le Désert | ×2,3 | pics à survoler, rafales descendantes | — |
+| 🏝️ Archipel | 750 m en Montagnes | ×3 | l'eau arrête le vol (sauf rebond), mouettes | — |
+| ⛈️ Orage | 800 m dans l'Archipel | ×4 | pluie, nuages électriques, rafales | — |
+| 🪨 Canyon | 800 m dans l'Orage | ×5 | piliers de roche, vautours | rafales dans le dos |
+| 🏙️ Ville | 800 m dans le Canyon | ×6 | gratte-ciel, pigeons, rafales entre les tours | air chaud des toits |
+| 🌋 Volcan | 800 m en Ville | ×7,5 | lave qui brûle l'avion, nuages de cendres | thermiques au-dessus de la lave |
+| 🧊 Banquise | 900 m sur le Volcan | ×9 | fort vent de face, blizzard | glace très glissante, chouettes |
+
+### Chocs
+Si l'avion rentre trop fort dans le sol, un pilier ou un immeuble, **son nez se plie** (il plane moins bien pour le reste du vol). Un choc encore plus fort, de face contre un mur ou en piqué, **l'écrase en boule de papier** et termine le vol. La lave le brûle. Le Rebond et la compétence Origami renforcé protègent.
+
+### Diamants 💎
+Monnaie rare, à part de l'argent : quelques diamants dans le ciel (un peu plus en altitude), 3 diamants à l'ouverture d'une nouvelle carte, 1 diamant par palier de 500 m de record sur chaque carte. Ils servent uniquement à acheter des cosmétiques exclusifs dans l'onglet Avion : modèles Grue en origami, Hirondelle, Navette ; couleurs Corail, Encre, Holographique, Galaxie ; motifs Cœurs, Cahier, Journal, Carte au trésor ; traînées Encre, Étincelles, Confettis.
 
 ### Argent
 0,25 $ par mètre et 3 $ par pièce, multipliés par la Prime au mètre, la compétence Fortune et les gains de la carte.
@@ -64,8 +74,9 @@ On peut aussi choisir son modèle, sa couleur (12), son motif (rayures, pois, é
 Prairie avec maisons, granges, moulins, plusieurs espèces d'arbres et ombres portées ; le ciel s'assombrit en montant jusqu'à une nuit étoilée avec la lune et des étoiles filantes.
 
 ### Compétences (XP)
-Chaque niveau donne 1 point de compétence. On commence **sans aucun slot** ; les 3 slots se débloquent aux niveaux **2, 6 et 12**.
+Chaque niveau donne 1 point de compétence. On commence **sans aucun emplacement** ; les 4 emplacements se débloquent aux niveaux **2, 6, 12 et 20**.
 Chaque compétence a 3 niveaux.
+- Nouvelles : Origami renforcé 🧱 (résiste aux chocs), Glissade 🛷, Vent arrière 🍃, Chasseur de trésor 🗝️ (plus de diamants), Battement d'ailes 🦅 (actif), Bouclier de papier 🛡️ (actif, ignore les pièges)
 - Passives : Rebond 🏀, Plume 🪶 (gravité réduite), Érudit 📚 (+XP), Super aimant 🌀, Fortune 💎 (+argent), Recharge ♻️ (le boost se recharge après une pause, jusqu'à 1/2/3 s par vol), Chance 🍀 (plus de bonus)
 - Actives : Second lancer 🔁, Ascension 🌪️, Nitro ⚡, Vol plané 🛩️
 

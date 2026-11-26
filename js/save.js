@@ -17,9 +17,10 @@
       runs: 0,
       upgrades: {},
       skills: {},
-      slots: [null, null, null],
+      slots: [null, null, null, null],
+      diamonds: 0,
       settings: { sound: true, vibration: true },
-      plane: { model: 'auto', color: 'blanc', pattern: 'none', trail: 'white' },
+      plane: { model: 'auto', color: 'blanc', pattern: 'none', trail: 'white', owned: [] },
       currentMap: 'prairie',
       maps: { prairie: { unlocked: true, best: 0, last: 0 } },
       updatedAt: 0,
@@ -34,6 +35,7 @@
     out.skills = Object.assign({}, obj.skills || {});
     out.settings = Object.assign(defaults().settings, obj.settings || {});
     out.plane = Object.assign(defaults().plane, obj.plane || {});
+    if (!Array.isArray(out.plane.owned)) out.plane.owned = [];
     // Cartes : records par carte (reprise de l'ancien record unique pour la Prairie)
     out.maps = {};
     const src = obj.maps || {};
@@ -41,9 +43,9 @@
     if (!out.maps.prairie) out.maps.prairie = { unlocked: true, best: +obj.record || 0, last: +obj.lastDistance || 0 };
     out.maps.prairie.unlocked = true;
     if (!out.maps[out.currentMap] || !out.maps[out.currentMap].unlocked) out.currentMap = 'prairie';
-    out.slots = Array.isArray(obj.slots) ? obj.slots.slice(0, 3) : [null, null, null];
-    while (out.slots.length < 3) out.slots.push(null);
-    for (const k of ['money', 'xp', 'record', 'totalDistance', 'runs', 'updatedAt', 'lastDistance']) {
+    out.slots = Array.isArray(obj.slots) ? obj.slots.slice(0, 4) : [null, null, null, null];
+    while (out.slots.length < 4) out.slots.push(null);
+    for (const k of ['money', 'xp', 'record', 'totalDistance', 'runs', 'updatedAt', 'lastDistance', 'diamonds']) {
       out[k] = Number.isFinite(+out[k]) ? +out[k] : 0;
     }
     return out;

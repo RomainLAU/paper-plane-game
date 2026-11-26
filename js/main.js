@@ -106,6 +106,12 @@
       d.maps[next.id] = Object.assign(d.maps[next.id] || { best: 0, last: 0 }, { unlocked: true });
       newMap = next;
     }
+    // Diamants : ceux attrapés, + 3 à l'ouverture d'une carte, + 1 par palier de 500 m de record sur la carte
+    let diamonds = p.diamonds;
+    if (newMap) diamonds += 3;
+    const step = Math.floor(mr.best / 500);
+    if (step > (mr.milestone || 0)) { diamonds += step - (mr.milestone || 0); mr.milestone = step; }
+    d.diamonds = (d.diamonds || 0) + diamonds;
     const after = Data.levelInfo(d.xp).level;
     Save.write();
     return {
@@ -113,7 +119,7 @@
       level: after, levelsGained: after - before,
       newSlots: Data.unlockedSlots(after) - Data.unlockedSlots(before),
       cosmetics: G.Planes.unlocksBetween(before, after),
-      newMap, map: S.map,
+      newMap, map: S.map, diamonds, crashed: p.crumple >= 1, burnt: p.burnt,
     };
   }
 
@@ -139,7 +145,7 @@
 
   function bankWithToast() {
     const r = bank();
-    if (r && r.dist > 0) UI.toast(`${UI.fmt(r.dist)} m comptés : +${UI.fmt(r.money)} $ et +${UI.fmt(r.xp)} XP${r.levelsGained ? `, niveau ${r.level}` : ''}${r.newRecord ? ', nouveau record' : ''}`);
+    if (r && r.dist > 0) UI.toast(`${UI.fmt(r.dist)} m comptés : +${UI.fmt(r.money)} $ et +${UI.fmt(r.xp)} XP${r.diamonds ? `, +${r.diamonds} 💎` : ''}${r.levelsGained ? `, niveau ${r.level}` : ''}${r.newRecord ? ', nouveau record' : ''}`);
   }
   function restart() { bankWithToast(); play(); }
   function quit() { bankWithToast(); toHangar(); }
@@ -155,6 +161,14 @@
   }
 
   // ---------------------------------------------------------------- Effets
+  // éclats de papier après un choc
+  function paperBits(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI, v = 3 + Math.random() * 6;
+      S.particles.push({ x, y: y + 0.3, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.9, max: 0.9, color: i % 3 ? '#ffffff' : '#c9d6e6', size: 2 + Math.random() * 2.5, g: 14 });
+    }
+  }
+
   function burst(x, y, color, n, speed) {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, v = speed * (0.4 + Math.random() * 0.8);
@@ -162,6 +176,7 @@
     }
   }
   const PK_COLOR = { boost: '#ff8a2b', speed: '#ffd23f', lift: '#5be37a', coin: '#ffe066', bird: '#e8e8f0', balloon: '#ff7a7a', star: '#ffe14d', diamond: '#7fe3ff', jet: '#ffffff' , sand: '#e0b96a', down: '#9fc4ff', gull: '#ffffff', storm: '#d9e4ff'};
+  const PK_TEXT_EXTRA = { shield: '🛡️ Bloqué', up: '⏫ Air chaud', gust: '💨 Vent dans le dos' };
   const PK_TEXT = { boost: '🔥 Boost', speed: '⚡ Vitesse', lift: '⏫ Ascendance', bird: '🐦 Hop !', balloon: '🎈 Boing !', star: '⭐ Étoile !', diamond: '💎 +5', jet: '🌬️ Courant-jet !' , sand: '🌪️ Tempête de sable !', down: '⬇️ Rafale !', gull: '🐦 Aïe !', storm: '⚡ Zap !'};
   function floater(x, y, text, color) {
     S.floaters.push({ x, y, text, color, life: 1.1, max: 1.1 });
@@ -441,7 +456,7 @@
     if (S.mode === 'play' && !S.paused && p.state === 'aim') updateKeyboardAim(dt, stickY);
     if (S.mode === 'play' && !S.paused) {
       S.time += dt;
-      if (p.state === 'flying' || p.state === 'sliding') {
+      if (p.state === 'flying' || p.state === 'sliding' || p.state === 'falling') {
         S.acc += dt;
         const pad = S.pad || {};
         const input = {
@@ -459,14 +474,21 @@
             if (pk.type === 'balloon') pk.usedAt = S.time;
             const bx = pk.type === 'jet' ? p.x : pk.x, by = pk.type === 'jet' ? p.y : pk.y;
             if (pk.type !== 'jet' && pk.type !== 'sand' && pk.type !== 'down') burst(bx, by, PK_COLOR[pk.type], pk.type === 'coin' ? 6 : pk.type === 'star' ? 24 : 14, 8);
-            if (PK_TEXT[pk.type] && (pk.type !== 'bird' || !S.floaters.some(f => f.text === PK_TEXT.bird && f.life > 0.6))) {
-              floater(p.x, p.y + 2.5, PK_TEXT[pk.type], pk.type === 'star' ? '#ffe14d' : ['gull', 'storm', 'down', 'sand'].includes(pk.type) ? '#ff8a8a' : '#ffffff');
+            const txt = PK_TEXT_EXTRA[pk.type] || PK_TEXT[pk.type];
+            if (pk.type === 'diamond') floater(p.x, p.y + 2.5, '💎 Diamant !', '#9fe9ff');
+            else if (txt && (pk.type !== 'bird' || !S.floaters.some(f => f.text === PK_TEXT.bird && f.life > 0.6))) {
+              floater(p.x, p.y + 2.5, txt, pk.type === 'star' ? '#ffe14d' : ['gull', 'storm', 'down', 'sand'].includes(pk.type) ? '#ff8a8a' : '#ffffff');
             }
           }
         }
         for (const e of ev) {
           if (e === 'bounce') { Sfx.bounce(); UI.vibrate(30); burst(p.x, p.y, '#b08850', 10, 6); }
           else if (e === 'land') { Sfx.land(); UI.vibrate(40); burst(p.x, p.y, '#a07a48', 14, 5); }
+          else if (e === 'crash') { Sfx.crunch(true); UI.vibrate([60, 40, 80]); paperBits(p.x, p.y, 22); floater(p.x, p.y + 3, 'Écrasé !', '#ffd0d4'); }
+          else if (e === 'bend') { Sfx.crunch(false); UI.vibrate(40); paperBits(p.x, p.y, 8); floater(p.x, p.y + 3, 'Nez plié', '#ffffff'); }
+          else if (e === 'bonk') { Sfx.crunch(false); UI.vibrate(40); paperBits(p.x, p.y, 8); floater(p.x, p.y + 3, 'Paf, un mur', '#ffffff'); }
+          else if (e === 'burn') { Sfx.burn(); UI.vibrate([60, 40, 80]); burst(p.x, p.y + 0.5, '#ff7a1f', 24, 7); burst(p.x, p.y + 0.5, '#3a3a3a', 14, 4); floater(p.x, p.y + 3, 'Brûlé !', '#ffd0a0'); }
+          else if (e === 'sizzle') { Sfx.burn(); burst(p.x, p.y, '#ff9a3c', 14, 6); floater(p.x, p.y + 3, 'Ça brûle !', '#ffd0a0'); }
           else if (e === 'ricochet') { Sfx.splash(true); UI.vibrate(30); burst(p.x, p.y, '#bfe9ff', 14, 7); }
           else if (e === 'splash') { Sfx.splash(false); UI.vibrate([40, 30, 40]); burst(p.x, 0.2, '#bfe9ff', 26, 9); floater(p.x, 3, '💦 Plouf !', '#ffffff'); }
         }
@@ -523,6 +545,8 @@
   }
 
   // ---------------------------------------------------------------- Démarrage
+  G.__game = S; // accès de débogage (console du navigateur)
+
   async function boot() {
     Renderer.init(canvas);
     await Save.init();

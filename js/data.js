@@ -58,12 +58,26 @@
       desc: l => `Après 1,5 s sans booster, le boost se recharge doucement : jusqu'à ${[0, 1, 2, 3][l]} s récupérées par vol` },
     { id: 'luck', type: 'passive', icon: '🍀', name: 'Chance', req: 8,
       desc: l => `+${[0, 30, 60, 100][l]}% de bonus sur la carte` },
+    { id: 'sturdy', type: 'passive', icon: '🧱', name: 'Origami renforcé', req: 3,
+      desc: l => `L'avion encaisse ${[0, 30, 60, 100][l]}% de choc en plus avant de se plier ou de s'écraser` },
+    { id: 'slide', type: 'passive', icon: '🛷', name: 'Glissade', req: 4,
+      desc: l => `Après l'atterrissage, l'avion glisse plus loin (frottement -${[0, 30, 50, 70][l]}%)` },
+    { id: 'flap', type: 'active', icon: '🦅', name: "Battement d'ailes", req: 5,
+      uses: l => [0, 3, 4, 5][l],
+      desc: l => `Un coup d'ailes qui fait remonter un peu et redonne de la vitesse (${[0, 3, 4, 5][l]}× par vol)` },
+    { id: 'tailwind', type: 'passive', icon: '🍃', name: 'Vent arrière', req: 6,
+      desc: l => `Le vent de face, le sable et le blizzard te freinent ${[0, 30, 60, 90][l]}% moins` },
+    { id: 'shield', type: 'active', icon: '🛡️', name: 'Bouclier de papier', req: 9,
+      uses: () => 1,
+      desc: l => `Pendant ${[0, 6, 8, 10][l]} s, les oiseaux, nuages, rafales et tempêtes ne te font plus rien (1× par vol)` },
+    { id: 'treasure', type: 'passive', icon: '🗝️', name: 'Chasseur de trésor', req: 11,
+      desc: l => `${[0, 50, 100, 150][l]}% de diamants en plus dans le ciel` },
     { id: 'glider', type: 'active', icon: '🛩️', name: 'Vol plané', req: 10,
       uses: () => 1,
       desc: l => `L'avion ne perd plus d'altitude pendant ${[0, 3, 4.5, 6][l]} s (1× par vol)` },
   ];
   const SKILL_MAX = 3;
-  const SLOT_LEVELS = [2, 6, 12]; // niveau requis pour chaque slot
+  const SLOT_LEVELS = [2, 6, 12, 20]; // niveau requis pour chaque emplacement
 
   function skillCost(nextLevel) { return nextLevel; }
 
@@ -116,6 +130,10 @@
       regen: [0, 0.2, 0.25, 0.3][sk('regen')],
       regenBudget: [0, 1, 2, 3][sk('regen')], // secondes de boost récupérables par vol
       density: 1 + [0, 0.3, 0.6, 1][sk('luck')],
+      toughness: 1 + [0, 0.3, 0.6, 1][sk('sturdy')],
+      slideMult: 1 - [0, 0.3, 0.5, 0.7][sk('slide')],
+      tailwind: [0, 0.3, 0.6, 0.9][sk('tailwind')],
+      diamondMult: 1 + [0, 0.5, 1, 1.5][sk('treasure')],
       // Altitude max à laquelle on fait apparaître des bonus : dépend de l'énergie de lancer
       spawnAlt: Math.max(16, Math.min(140, launchHeight + (launchSpeed * launchSpeed) / (2 * GRAVITY) * 0.6)),
       actives: [],
