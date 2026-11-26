@@ -66,7 +66,7 @@
       const value = maxed
         ? `${up.stat} <b>${up.fmt(up.value(l))}</b>`
         : `${up.stat} <b>${up.fmt(up.value(l))}</b>, puis ${up.fmt(up.value(l + 1))}`;
-      html += `<li class="line">
+      html += `<li class="line kind-upgrade">
         <span class="sticker" aria-hidden="true">${up.icon}</span>
         <div>
           <div class="line-name">${up.name}</div>
@@ -116,7 +116,7 @@
       }
       const shown = Math.max(1, l);
       const next = l > 0 && l < Data.SKILL_MAX ? `<div class="line-value">Niveau ${l + 1} : ${sk.desc(l + 1)}</div>` : '';
-      html += `<li class="line stacked ${locked ? 'locked' : ''}">
+      html += `<li class="line stacked kind-${sk.type} ${locked ? 'locked' : ''}">
         <span class="sticker" aria-hidden="true">${sk.icon}</span>
         <div>
           <div class="line-name">${sk.name}<span class="line-kind">${sk.type === 'active' ? 'à déclencher' : 'toujours active'}${equipped ? ', équipée' : ''}</span></div>
@@ -340,6 +340,9 @@
   }
 
   // ---------------------------------------------------------------- Cartes
+  // couleur de feutre de chaque carte (trait à gauche de sa fiche)
+  const MAP_INK = { prairie: '#7cc66b', desert: '#e8b04a', mountains: '#8fa6c9', ocean: '#3dbbe0', storm: '#6b7488', canyon: '#d9733e', city: '#8a95a8', volcano: '#e2543a', ice: '#9fd3f2' };
+
   function renderMaps() {
     const d = Save.data, M = G.Maps;
     let html = '';
@@ -358,7 +361,7 @@
           <div class="progress" role="img" aria-label="${Math.round(pct)} %"><i style="width:${pct}%"></i></div>`;
       }
       const tag = ok ? 'button' : 'div';
-      html += `<li><${tag} class="map-line ${ok ? '' : 'locked'} ${sel ? 'sel' : ''}" ${ok ? `data-map="${m.id}"` : ''}>
+      html += `<li><${tag} class="map-line ${ok ? '' : 'locked'} ${sel ? 'sel' : ''}" style="--mk:${MAP_INK[m.id] || '#ffe95c'}" ${ok ? `data-map="${m.id}"` : ''}>
         <span class="map-icon" aria-hidden="true">${m.icon}</span>
         <span>
           <span class="map-name">${m.name}${sel ? '<small>carte actuelle</small>' : ''}</span>
