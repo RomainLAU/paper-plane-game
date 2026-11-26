@@ -9,23 +9,23 @@
   // ---------------------------------------------------------------- Améliorations (argent)
   const UPGRADES = [
     { id: 'launch', icon: '💪', name: 'Lancer puissant', desc: 'Lance plus fort',
-      max: 15, base: 15, growth: 1.42, value: l => 13 + 2.2 * l, fmt: v => `${v.toFixed(0)} m/s` },
+      max: 15, base: 15, growth: 1.42, value: l => 13 + 2.2 * l, stat: 'Vitesse de lancer', fmt: v => `${v.toFixed(0)} m/s` },
     { id: 'height', icon: '🗼', name: 'Tremplin', desc: 'Lance de plus haut',
-      max: 12, base: 22, growth: 1.5, value: l => 6 + 3 * l, fmt: v => `${v} m` },
+      max: 12, base: 22, growth: 1.5, value: l => 6 + 3 * l, stat: 'Hauteur', fmt: v => `${v} m` },
     { id: 'wings', icon: '🕊️', name: 'Ailes planeuses', desc: 'Garde mieux sa hauteur',
-      max: 15, base: 25, growth: 1.45, value: l => 1 + 0.1 * l, fmt: v => `finesse ×${v.toFixed(1)}` },
+      max: 15, base: 25, growth: 1.45, value: l => 1 + 0.1 * l, stat: 'Finesse', fmt: v => `×${v.toFixed(1).replace('.', ',')}` },
     { id: 'aero', icon: '📐', name: 'Pliage aérodynamique', desc: "Moins de frottements, vole plus vite",
-      max: 12, base: 30, growth: 1.5, value: l => 1 + 0.08 * l, fmt: v => `vitesse ×${Math.sqrt(v).toFixed(2)}` },
+      max: 12, base: 30, growth: 1.5, value: l => 1 + 0.08 * l, stat: 'Vitesse de croisière', fmt: v => `×${Math.sqrt(v).toFixed(2).replace('.', ',')}` },
     { id: 'tank', icon: '🛢️', name: 'Réservoir', desc: 'Plus de boost en stock',
-      max: 10, base: 35, growth: 1.5, value: l => 1.2 + 0.35 * l, fmt: v => `${v.toFixed(1)} s de boost` },
+      max: 10, base: 35, growth: 1.5, value: l => 1.2 + 0.35 * l, stat: 'Boost', fmt: v => `${v.toFixed(1).replace('.', ',')} s` },
     { id: 'thrust', icon: '🚀', name: 'Turbine', desc: 'Boost plus puissant',
-      max: 10, base: 40, growth: 1.5, value: l => 9 + 1.6 * l, fmt: v => `poussée ${v.toFixed(0)}` },
+      max: 10, base: 40, growth: 1.5, value: l => 9 + 1.6 * l, stat: 'Poussée', fmt: v => `${v.toFixed(0)}` },
     { id: 'magnet', icon: '🧲', name: 'Aimant', desc: 'Attire les bonus proches',
-      max: 8, base: 50, growth: 1.6, value: l => 1.5 + 1 * l, fmt: v => `rayon ${v.toFixed(1)} m` },
+      max: 8, base: 50, growth: 1.6, value: l => 1.5 + 1 * l, stat: 'Rayon', fmt: v => `${v.toFixed(1).replace('.', ',')} m` },
     { id: 'bonus', icon: '✨', name: 'Bonus renforcés', desc: 'Bonus ramassés plus efficaces',
-      max: 10, base: 45, growth: 1.55, value: l => 1 + 0.1 * l, fmt: v => `effet ×${v.toFixed(1)}` },
+      max: 10, base: 45, growth: 1.55, value: l => 1 + 0.1 * l, stat: 'Effet', fmt: v => `×${v.toFixed(1).replace('.', ',')}` },
     { id: 'money', icon: '💰', name: 'Prime au mètre', desc: "Plus d'argent par mètre",
-      max: 15, base: 60, growth: 1.5, value: l => 1 + 0.1 * l, fmt: v => `gains ×${v.toFixed(1)}` },
+      max: 15, base: 60, growth: 1.5, value: l => 1 + 0.1 * l, stat: 'Gains', fmt: v => `×${v.toFixed(1).replace('.', ',')}` },
   ];
 
   function upgradeCost(up, level) {

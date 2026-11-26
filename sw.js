@@ -1,9 +1,10 @@
 /* Service worker : le jeu fonctionne hors-ligne une fois chargé.
    Stratégie "réseau d'abord" : toujours la dernière version en ligne, le cache sert seulement hors-ligne. */
-const CACHE = 'aeropapier-v7';
+const CACHE = 'aeropapier-v8';
 const ASSETS = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
   'js/data.js', 'js/physics.js', 'js/maps.js', 'js/planes.js', 'js/save.js', 'js/audio.js', 'js/render.js', 'js/ui.js', 'js/main.js',
+  'fonts/playwrite-fr-moderne.woff2', 'fonts/atkinson-400.woff2', 'fonts/atkinson-700.woff2', 'fonts/atkinson-400-italic.woff2',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
 ];
 

@@ -69,6 +69,12 @@ Chaque compétence a 3 niveaux.
 - Passives : Rebond 🏀, Plume 🪶 (gravité réduite), Érudit 📚 (+XP), Super aimant 🌀, Fortune 💎 (+argent), Recharge ♻️ (le boost se recharge après une pause, jusqu'à 1/2/3 s par vol), Chance 🍀 (plus de bonus)
 - Actives : Second lancer 🔁, Ascension 🌪️, Nitro ⚡, Vol plané 🛩️
 
+## Interface : le cahier d'écolier
+Toute l'interface reprend un cahier français à grands carreaux (réglure Seyès) : encre bleue de stylo-plume, marge rouge où le niveau est noté comme par un professeur, coup de surligneur sur ce qu'on peut acheter, intercalaires de couleur pour les onglets, feuilles scotchées pour la pause, les résultats et les cartes.
+- Polices (hébergées dans `fonts/`, licence OFL) : **Playwrite FR Moderne**, inspirée de l'écriture cursive enseignée à l'école en France, pour les titres et les gros chiffres ; **Atkinson Hyperlegible** pour tout le reste.
+- Couleurs : papier `#fbfcff`, lignes `#b4c4ec`, marge `#e2545e`, encre `#1d3487`, crayon `#5a6075`, surligneur `#ffe95c`.
+- Focus clavier visible, mouvements réduits respectés (`prefers-reduced-motion`).
+
 ## Sauvegarde
 La progression est enregistrée automatiquement à la fin de chaque vol, dans le `localStorage` **et** dans IndexedDB, et le jeu demande au navigateur un stockage persistant (`navigator.storage.persist()`).
 
@@ -89,7 +95,8 @@ Dans le dépôt GitHub : **Settings → Pages → Source : GitHub Actions**. Le 
 ## Structure
 ```
 index.html             page + HUD + menus
-css/style.css          styles (paysage, zones sûres des encoches)
+css/style.css          styles « cahier d'écolier » (paysage, zones sûres des encoches)
+fonts/                 polices Playwrite FR Moderne et Atkinson Hyperlegible
 js/data.js             améliorations, compétences, niveaux, calcul des stats
 js/planes.js           modèles d'avion, couleurs, motifs, traînées
 js/maps.js             cartes (difficulté, gains, pièges)

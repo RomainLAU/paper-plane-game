@@ -59,8 +59,8 @@
     UI.hideMenu(); UI.hideResults(); UI.hidePause();
     UI.buildHudSkills(S.stats);
     UI.hint(DESKTOP
-      ? '⬆️⬇️ pour viser · maintiens <b>Espace</b> pour doser la puissance, relâche pour lancer<br><small>ou glisse vers l\'arrière avec la souris</small>'
-      : "Glisse vers l'arrière puis relâche pour lancer ✈");
+      ? 'Vise avec les flèches haut et bas, puis maintiens Espace pour doser la puissance. Relâche pour lancer.<small>Tu peux aussi glisser vers l\'arrière avec la souris.</small>'
+      : "Glisse vers l'arrière, puis relâche pour lancer.");
   }
 
   function toHangar() {
@@ -139,7 +139,7 @@
 
   function bankWithToast() {
     const r = bank();
-    if (r && r.dist > 0) UI.toast(`+💰 ${UI.fmt(r.money)} · +${UI.fmt(r.xp)} XP${r.levelsGained ? ` · Niveau ${r.level} !` : ''}${r.newRecord ? ' · 🏆 Record !' : ''}`);
+    if (r && r.dist > 0) UI.toast(`${UI.fmt(r.dist)} m comptés : +${UI.fmt(r.money)} $ et +${UI.fmt(r.xp)} XP${r.levelsGained ? `, niveau ${r.level}` : ''}${r.newRecord ? ', nouveau record' : ''}`);
   }
   function restart() { bankWithToast(); play(); }
   function quit() { bankWithToast(); toHangar(); }
@@ -207,8 +207,8 @@
     Sfx.launch();
     UI.vibrate(20);
     if (Save.data.runs < 3) UI.hint(DESKTOP
-      ? '<b>Espace</b> ou ⬆️ : planer · <b>B</b>, <b>Maj</b> ou ➡️ : boost · <b>1 2 3</b> : compétences'
-      : 'Maintiens l\'écran pour planer · 🔥 pour booster', 3500);
+      ? 'Maintiens Espace pour planer, B pour booster, 1 2 3 pour tes compétences.'
+      : "Maintiens l'écran pour planer, touche 🔥 pour booster.", 3500);
     else UI.hint(null);
   }
 
@@ -268,7 +268,7 @@
     const c = e.code;
     Sfx.unlock();
     let used = true;
-    if (c === 'KeyM') { Save.data.settings.sound = !Save.data.settings.sound; Save.write(); if (!Save.data.settings.sound) Sfx.silence(); UI.toast(Save.data.settings.sound ? '🔊 Son activé' : '🔇 Son coupé', 1200); }
+    if (c === 'KeyM') { Save.data.settings.sound = !Save.data.settings.sound; Save.write(); if (!Save.data.settings.sound) Sfx.silence(); UI.toast(Save.data.settings.sound ? 'Son activé' : 'Son coupé', 1200); }
     else if (c === 'KeyF') toggleFullscreen();
     else if (S.mode === 'menu') {
       if (UI.mapsOpen()) { if (c === 'Escape' || K.act(c)) UI.closeMaps(); else used = false; }
@@ -409,8 +409,8 @@
       if (req) {
         Promise.resolve(req.call(el)).then(() => {
           if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
-        }).catch(() => UI.toast('Plein écran non disponible ici'));
-      } else UI.toast('Plein écran non disponible ici');
+        }).catch(() => UI.toast('Ce navigateur ne permet pas le plein écran'));
+      } else UI.toast('Ce navigateur ne permet pas le plein écran');
     }
   }
   function maybeFullscreen() {

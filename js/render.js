@@ -662,7 +662,7 @@
       ctx.fillStyle = '#e8e0d0';
       ctx.fillRect(x - 1.5, y - ph, 3, ph);
       if (big) {
-        ctx.font = `bold ${fs}px system-ui, sans-serif`;
+        ctx.font = `bold ${fs}px Atkinson, system-ui, sans-serif`;
         const label = `${m} m`;
         const tw = ctx.measureText(label).width + 10;
         ctx.fillStyle = '#ffffff';
@@ -674,8 +674,8 @@
         ctx.fillText(label, x, y - ph - fs / 2 - 3);
       }
     }
-    if (state.record > 5) drawFlag(state.record, '#ff3b4f', 'RECORD');
-    if (state.lastDistance > 5 && Math.abs(state.lastDistance - state.record) > 3) drawFlag(state.lastDistance, '#3b8bff', 'DERNIER');
+    if (state.record > 5) drawFlag(state.record, '#e2545e', 'Record');
+    if (state.lastDistance > 5 && Math.abs(state.lastDistance - state.record) > 3) drawFlag(state.lastDistance, '#1d3487', 'Dernier vol');
   }
 
   function drawFlag(x, color, label) {
@@ -693,7 +693,7 @@
     ctx.lineTo(bx + 2, by - h + h * 0.3);
     ctx.closePath();
     ctx.fill();
-    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.font = 'bold 11px Atkinson, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
@@ -911,7 +911,7 @@
     ctx.stroke();
     // flèches aux extrémités
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.font = `bold ${Math.max(12, Math.min(20, hh * 0.5))}px system-ui, sans-serif`;
+    ctx.font = `bold ${Math.max(12, Math.min(20, hh * 0.5))}px Atkinson, system-ui, sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     if (x0 > -40 && x0 < W) ctx.fillText('»»', x0 + 4, yc);
@@ -1301,7 +1301,7 @@
       ctx.beginPath(); ctx.arc(sx(pk.x + u), yc + v, 1.2 + hash(i) * 1.5, 0, Math.PI * 2); ctx.fill();
     }
     ctx.fillStyle = 'rgba(120,80,30,0.8)';
-    ctx.font = `bold ${Math.max(12, Math.min(18, hh * 0.5))}px system-ui, sans-serif`;
+    ctx.font = `bold ${Math.max(12, Math.min(18, hh * 0.5))}px Atkinson, system-ui, sans-serif`;
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     if (x0 > -40 && x0 < W) ctx.fillText('🌪️', x0 + 4, yc);
   };
@@ -1371,7 +1371,7 @@
     for (const f of list) {
       const a = Math.max(0, Math.min(1, f.life / f.max * 1.5));
       ctx.globalAlpha = a;
-      ctx.font = 'bold 16px system-ui, sans-serif';
+      ctx.font = 'bold 16px Atkinson, system-ui, sans-serif';
       const x = sx(f.x), y = sy(f.y) - (1 - f.life / f.max) * 30;
       ctx.lineWidth = 4;
       ctx.strokeStyle = 'rgba(0,0,0,0.35)';
@@ -1415,7 +1415,7 @@
       ctx.stroke();
     } else if (type === 'coin') {
       ctx.fillStyle = '#a86f00';
-      ctx.font = `bold ${Math.round(R * 1.2)}px system-ui, sans-serif`;
+      ctx.font = `bold ${Math.round(R * 1.2)}px Atkinson, system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('$', 0, 1);
@@ -1570,7 +1570,7 @@
     ctx.lineTo(ex + Math.cos(aim.angle + 2.3) * 12, ey - Math.sin(aim.angle + 2.3) * 12);
     ctx.lineTo(ex + Math.cos(aim.angle - 2.3) * 12, ey - Math.sin(aim.angle - 2.3) * 12);
     ctx.fill();
-    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.font = 'bold 15px Atkinson, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff';
